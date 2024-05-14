@@ -6,17 +6,26 @@ import (
 	"net/http"
 
 	"github.com/VinukaThejana/go-utils/logger"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/controllers"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/segmentio/kafka-go"
 )
 
-var e env.Env
+var (
+	e       env.Env
+	streamC controllers.Stream
+)
 
 func init() {
 	e.Load()
+
+	streamC = controllers.Stream{
+		E: &e,
+	}
 }
 
 func main() {
@@ -31,6 +40,14 @@ func main() {
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
+
+	router.Get("/", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "Keep-alive")
+
+		streamC.Subscribe(w, kafka.LastOffset)
+	})
 
 	logger.Log(fmt.Sprintf("Listening and running on port -> %d", e.Port))
 	lib.LogFatal(http.ListenAndServe(fmt.Sprintf(":%d", e.Port), router))
