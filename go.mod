@@ -2,7 +2,10 @@ module github.com/flitlabs/spotoncars-stream-go
 
 go 1.22.1
 
-require github.com/VinukaThejana/go-utils/logger v0.0.0-20231010161001-94625009f8d2
+require (
+	github.com/VinukaThejana/go-utils/logger v0.0.0-20231010161001-94625009f8d2
+	github.com/go-chi/chi/v5 v5.0.12
+)
 
 require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
