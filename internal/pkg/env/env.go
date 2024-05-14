@@ -17,6 +17,7 @@ type Env struct {
 	KafkaUsername string `mapstructure:"KAFKA_USERNAME" validate:"required"`
 	KafkaPassword string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
 	KafkaBroker   string `mapstructure:"KAFKA_BROKER" validate:"required"`
+	KafkaTopic    string `mapstructure:"KAFKA_TOPIC" validate:"required"`
 	Port          int    `mapstructure:"PORT" validate:"required"`
 }
 
