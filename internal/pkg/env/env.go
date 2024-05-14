@@ -12,8 +12,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Env contains the env schema
 type Env struct {
-	Port int `mapstructure:"PORT" validate:"required"`
+	KafkaUsername string `mapstructure:"KAFKA_USERNAME" validate:"required"`
+	KafkaPassword string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
+	KafkaBroker   string `mapstructure:"KAFKA_BROKER" validate:"required"`
+	Port          int    `mapstructure:"PORT" validate:"required"`
 }
 
 func (e *Env) Load(path ...string) {
