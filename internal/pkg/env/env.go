@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/VinukaThejana/go-utils/logger"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/spf13/viper"
 )
 
@@ -39,7 +40,7 @@ func (e *Env) Load(path ...string) {
 	_, err := os.Stat(configFile)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			logFatal(err)
+			lib.LogFatal(err)
 		}
 	} else {
 		viper.AddConfigPath(configPath)
@@ -48,14 +49,8 @@ func (e *Env) Load(path ...string) {
 
 	viper.AutomaticEnv()
 
-	logFatal(viper.ReadInConfig())
-	logFatal(viper.Unmarshal(&e))
+	lib.LogFatal(viper.ReadInConfig())
+	lib.LogFatal(viper.Unmarshal(&e))
 
 	logger.Validatef(e)
-}
-
-func logFatal(err error) {
-	if err != nil {
-		logger.Errorf(err)
-	}
 }
