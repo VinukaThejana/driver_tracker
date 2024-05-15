@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/VinukaThejana/go-utils/logger"
@@ -21,9 +23,21 @@ type Env struct {
 	Port          int    `mapstructure:"PORT" validate:"required"`
 }
 
+func environ() map[string]string {
+	m := make(map[string]string)
+	for _, s := range os.Environ() {
+		a := strings.Split(s, "=")
+		m[a[0]] = a[1]
+	}
+
+	return m
+}
+
 func (e *Env) Load(path ...string) {
 	configPath := "."
 	configFile := ".env"
+
+	v := viper.New()
 
 	if len(path) > 2 {
 		logger.Errorf(fmt.Errorf("invalid set of parameters are provided"))
@@ -47,15 +61,50 @@ func (e *Env) Load(path ...string) {
 		if !errors.Is(err, os.ErrNotExist) {
 			lib.LogFatal(err)
 		}
+
+		lib.LogFatal(parseEnvVars(environ(), e))
 	} else {
-		viper.AddConfigPath(configPath)
-		viper.SetConfigFile(configFile)
+		v.AddConfigPath(configPath)
+		v.SetConfigFile(configFile)
+
+		lib.LogFatal(v.ReadInConfig())
+		lib.LogFatal(v.Unmarshal(&e))
 	}
 
-	viper.AutomaticEnv()
-
-	lib.LogFatal(viper.ReadInConfig())
-	lib.LogFatal(viper.Unmarshal(&e))
-
 	logger.Validatef(e)
+}
+
+func parseEnvVars(envMap map[string]string, e interface{}) error {
+	objValue := reflect.ValueOf(e).Elem()
+	objType := objValue.Type()
+
+	for i := 0; i < objType.NumField(); i++ {
+		field := objType.Field(i)
+		envKey := field.Tag.Get("mapstructure")
+		envValue, ok := envMap[envKey]
+		if !ok {
+			continue
+		}
+
+		fieldValue := objValue.Field(i)
+		if !fieldValue.CanSet() {
+			return fmt.Errorf("field %s is not settable", field.Name)
+		}
+
+		switch fieldValue.Kind() {
+		case reflect.String:
+			fieldValue.SetString(envValue)
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			val, err := strconv.ParseInt(envValue, 10, 64)
+			if err != nil {
+				return fmt.Errorf("failed to parse %s as int: %v", envKey, err)
+			}
+
+			fieldValue.SetInt(val)
+		default:
+			return fmt.Errorf("unsupported type for field %s", field.Name)
+		}
+	}
+
+	return nil
 }
