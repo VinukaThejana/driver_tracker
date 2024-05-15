@@ -51,7 +51,15 @@ func main() {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "Keep-alive")
 
-		streamC.Subscribe(w, kafka.LastOffset)
+		streamC.Subscribe(w, e.KafkaTopic, kafka.LastOffset)
+	})
+
+	router.Get("/log", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "Keep-alive")
+
+		streamC.Subscribe(w, "log", kafka.FirstOffset)
 	})
 
 	router.Get("/health", func(w http.ResponseWriter, _ *http.Request) {

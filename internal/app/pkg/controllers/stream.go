@@ -44,7 +44,15 @@ func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) er
 
 	for {
 		message, _ := reader.ReadMessage(ctx)
+<<<<<<< Updated upstream
 		data := fmt.Sprintf("data: %s\n\n", string(message.Value))
+=======
+		payload, err := lib.ToStr(string(message.Value))
+		if err != nil {
+			go logErr(err, s.C, s.E)
+		}
+		payloadStr := string(payload)
+>>>>>>> Stashed changes
 
 		go func() {
 			services.Log(s.C, s.E, string(message.Value))
