@@ -22,7 +22,7 @@ type Stream struct {
 }
 
 // Subscribe is a function that is used to subscribe to the Kafka stream from a given Offset
-func (s *Stream) Subscribe(w http.ResponseWriter, offset int64) error {
+func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) error {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		return fmt.Errorf("failed to cast to flusher")
@@ -32,7 +32,7 @@ func (s *Stream) Subscribe(w http.ResponseWriter, offset int64) error {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{s.E.KafkaBroker},
 		GroupID:     uuid.New().String(),
-		Topic:       s.E.KafkaTopic,
+		Topic:       topic,
 		StartOffset: offset,
 		Dialer: &kafka.Dialer{
 			SASLMechanism: mechanism,
