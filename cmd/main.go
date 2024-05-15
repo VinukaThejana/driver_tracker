@@ -49,6 +49,24 @@ func main() {
 		streamC.Subscribe(w, kafka.LastOffset)
 	})
 
+	router.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+
+		html := `
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Health Check</title>
+    </head>
+    <body>
+        <h1>Everything is working as expected</h1>
+    </body>
+</html>
+    `
+
+		w.Write([]byte(html))
+	})
+
 	logger.Log(fmt.Sprintf("Listening and running on port -> %d", e.Port))
 	lib.LogFatal(http.ListenAndServe(fmt.Sprintf(":%d", e.Port), router))
 }
