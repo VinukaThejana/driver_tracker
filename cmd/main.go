@@ -7,6 +7,7 @@ import (
 
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/controllers"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
@@ -16,12 +17,15 @@ import (
 )
 
 var (
-	e       env.Env
+	e         env.Env
+	connector connections.C
+
 	streamC controllers.Stream
 )
 
 func init() {
 	e.Load()
+	connector.InitRedis(&e)
 
 	streamC = controllers.Stream{
 		E: &e,
