@@ -16,12 +16,12 @@ import (
 
 // Env contains the env schema
 type Env struct {
-	KafkaUsername string `mapstructure:"KAFKA_USERNAME" validate:"required"`
-	KafkaPassword string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
-	KafkaBroker   string `mapstructure:"KAFKA_BROKER" validate:"required"`
-	KafkaTopic    string `mapstructure:"KAFKA_TOPIC" validate:"required"`
-	RedisURL      string `mapstructure:"REDIS_URL" validate:"required"`
-	Port          int    `mapstructure:"PORT" validate:"required"`
+	KafkaUsername  string `mapstructure:"KAFKA_USERNAME" validate:"required"`
+	KafkaPassword  string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
+	KafkaBroker    string `mapstructure:"KAFKA_BROKER" validate:"required"`
+	KafkaTopic     string `mapstructure:"KAFKA_TOPIC" validate:"required"`
+	RedisLoggerURL string `mapstructure:"REDIS_LOGGER_URL" validate:"required"`
+	Port           int    `mapstructure:"PORT" validate:"required"`
 }
 
 // Load is a function that is used to Load environment variables
