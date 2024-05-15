@@ -29,6 +29,7 @@ func init() {
 
 	streamC = controllers.Stream{
 		E: &e,
+		C: &connector,
 	}
 }
 
