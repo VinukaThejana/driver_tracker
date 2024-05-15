@@ -9,7 +9,9 @@ RUN go mod download
 
 COPY . .
 
-RUN go mod tidy && go build -o stream ./cmd/main.go
+RUN go mod tidy
+
+RUN go build -o stream ./cmd/main.go
 
 EXPOSE 8080
 
