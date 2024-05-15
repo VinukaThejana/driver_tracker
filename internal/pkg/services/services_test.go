@@ -21,6 +21,6 @@ func init() {
 func TestLog(t *testing.T) {
 	fake := faker.New()
 
-	Log(&connector, fake.Json().Faker.Address())
-	Log(&connector, fake.Address().Country())
+	Log(&connector, &e, fake.Json().Faker.Address())
+	Log(&connector, &e, fake.Address().Country())
 }

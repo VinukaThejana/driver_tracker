@@ -45,7 +45,10 @@ func (s *Stream) Subscribe(w http.ResponseWriter, offset int64) error {
 	for {
 		message, _ := reader.ReadMessage(ctx)
 		data := fmt.Sprintf("data: %s\n\n", string(message.Value))
-		services.Log(s.C, data)
+
+		go func() {
+			services.Log(s.C, s.E, string(message.Value))
+		}()
 		fmt.Fprint(w, data)
 
 		flusher.Flush()
