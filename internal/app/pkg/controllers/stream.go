@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/services"
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
@@ -16,6 +18,7 @@ import (
 // Stream contains controllers related to streaming and subscribing to streaming services
 type Stream struct {
 	E *env.Env
+	C *connections.C
 }
 
 // Subscribe is a function that is used to subscribe to the Kafka stream from a given Offset
@@ -41,7 +44,10 @@ func (s *Stream) Subscribe(w http.ResponseWriter, offset int64) error {
 
 	for {
 		message, _ := reader.ReadMessage(ctx)
-		fmt.Fprintf(w, "data: %s\n\n", string(message.Value))
+		data := fmt.Sprintf("data: %s\n\n", string(message.Value))
+		services.Log(s.C, data)
+		fmt.Fprint(w, data)
+
 		flusher.Flush()
 	}
 }
