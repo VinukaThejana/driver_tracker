@@ -2,4 +2,7 @@
 package connections
 
 // C contains all third pary connections
-type C struct{}
+type C struct {
+	// R contains all Redis related databases
+	R *Redis
+}
