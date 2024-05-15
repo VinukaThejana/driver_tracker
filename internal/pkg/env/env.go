@@ -20,19 +20,11 @@ type Env struct {
 	KafkaPassword string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
 	KafkaBroker   string `mapstructure:"KAFKA_BROKER" validate:"required"`
 	KafkaTopic    string `mapstructure:"KAFKA_TOPIC" validate:"required"`
+	RedisURL      string `mapstructure:"REDIS_URL" validate:"required"`
 	Port          int    `mapstructure:"PORT" validate:"required"`
 }
 
-func environ() map[string]string {
-	m := make(map[string]string)
-	for _, s := range os.Environ() {
-		a := strings.Split(s, "=")
-		m[a[0]] = a[1]
-	}
-
-	return m
-}
-
+// Load is a function that is used to Load environment variables
 func (e *Env) Load(path ...string) {
 	configPath := "."
 	configFile := ".env"
@@ -72,6 +64,16 @@ func (e *Env) Load(path ...string) {
 	}
 
 	logger.Validatef(e)
+}
+
+func environ() map[string]string {
+	m := make(map[string]string)
+	for _, s := range os.Environ() {
+		a := strings.Split(s, "=")
+		m[a[0]] = a[1]
+	}
+
+	return m
 }
 
 func parseEnvVars(envMap map[string]string, e interface{}) error {
