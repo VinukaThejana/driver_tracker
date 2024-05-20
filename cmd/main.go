@@ -16,7 +16,6 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/services"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -44,6 +43,7 @@ func init() {
 	streamC = controllers.Stream{
 		E: &e,
 		C: &connector,
+		L: log,
 	}
 }
 
@@ -104,7 +104,7 @@ func main() {
 				"status":  "bad_request",
 				"message": "only content of type application/json can be sent",
 			})
-			go services.Log(&connector, &e, fmt.Sprintf("Sending invalid content type : %v", contentType))
+			log.Error("invalid content type provided", zap.String("Content-Type", contentType))
 			return
 		}
 
@@ -118,7 +118,7 @@ func main() {
 				"status":  "bad_request",
 				"message": "topic is not provided",
 			})
-			go services.Log(&connector, &e, "topic is not provided")
+			log.Error("topic is not provided")
 			return
 		}
 
@@ -132,7 +132,7 @@ func main() {
 					"status":  "bad_request",
 					"message": "body cannot be empty, please provide valid json",
 				})
-				go services.Log(&connector, &e, "the provided request body is empty")
+				log.Error("request body is empty")
 				return
 			}
 
@@ -141,7 +141,7 @@ func main() {
 				"status":  "bad_request",
 				"message": "failed to parse data invalid json",
 			})
-			go services.Log(&connector, &e, "invalid json object provided by the client")
+			log.Error("invalid json object provided by the client")
 			return
 		}
 
@@ -152,13 +152,12 @@ func main() {
 				"status":  "internal_server_error",
 				"message": "something went wrong on the server side",
 			})
-			go services.Log(&connector, &e, fmt.Sprintf("Error when marshaling the requst body\n%v", err))
+			log.Error("error when marshalling the requst body", zap.Error(err))
 			return
 		}
 		dataStr := string(dataBytes)
 
 		connector.KafkaWriteToTopic(&e, topic, dataStr)
-		go services.Log(&connector, &e, fmt.Sprintf("Logged %v", dataStr))
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(Response{
@@ -198,8 +197,8 @@ func main() {
 
 	select {
 	case sig := <-signalCh:
-		log.Info("shutting down server", zap.String("signal", sig.String()))
+		log.Info("shutting down server", zap.String("cause", "signal"), zap.String("signal", sig.String()))
 	case err := <-errCh:
-		log.Error("shutting down server", zap.Error(err))
+		log.Error("shutting down server", zap.String("cause", "error"), zap.Error(err))
 	}
 }

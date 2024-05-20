@@ -7,20 +7,20 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/services"
 	"github.com/google/uuid"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
+	"go.uber.org/zap"
 )
 
 // Stream contains controllers related to streaming and subscribing to streaming services
 type Stream struct {
 	E *env.Env
 	C *connections.C
+	L *zap.SugaredLogger
 }
 
 // Subscribe is a function that is used to subscribe to the Kafka stream from a given Offset
@@ -48,19 +48,14 @@ func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) er
 		message, _ := reader.ReadMessage(ctx)
 		payload, err := lib.ToStr(string(message.Value))
 		if err != nil {
-			go logErr(err, s.C, s.E)
+			s.L.Error("Error occured when serialization and deserialization", zap.String("message", string(message.Value)), zap.Error(err))
 		}
 		payloadStr := string(payload)
 
 		data := fmt.Sprintf("data: %s\n\n", payloadStr)
-		go services.Log(s.C, s.E, payloadStr)
+		s.L.Info(zap.String("data", data))
 		fmt.Fprint(w, data)
 
 		flusher.Flush()
 	}
-}
-
-func logErr(err error, c *connections.C, e *env.Env) {
-	logger.Error(err)
-	services.Log(c, e, err)
 }
