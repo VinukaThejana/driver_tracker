@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
-	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/controllers"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -19,11 +21,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/segmentio/kafka-go"
+	"go.uber.org/zap"
 )
 
 var (
 	e         env.Env
 	connector connections.C
+	log       *zap.SugaredLogger
 
 	streamC controllers.Stream
 )
@@ -32,6 +36,11 @@ func init() {
 	e.Load()
 	connector.InitRedis(&e)
 
+	logger, err := zap.NewProduction()
+	lib.LogFatal(err)
+	defer logger.Sync()
+	log = logger.Sugar()
+
 	streamC = controllers.Stream{
 		E: &e,
 		C: &connector,
@@ -39,6 +48,8 @@ func init() {
 }
 
 func main() {
+	errCh := make(chan error, 1)
+
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -174,6 +185,21 @@ func main() {
 		w.Write([]byte(html))
 	})
 
-	logger.Log(fmt.Sprintf("Listening and running on port -> %d", e.Port))
-	lib.LogFatal(http.ListenAndServe(fmt.Sprintf(":%d", e.Port), router))
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+
+	log.Infow("Started the HTTP server", zap.Int("address", e.Port))
+	go func() {
+		if err := http.ListenAndServe(fmt.Sprintf(":%d", e.Port), router); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Error("HTTP server error", zap.Error(err))
+			errCh <- err
+		}
+	}()
+
+	select {
+	case sig := <-signalCh:
+		log.Info("shutting down server", zap.String("signal", sig.String()))
+	case err := <-errCh:
+		log.Error("shutting down server", zap.Error(err))
+	}
 }
