@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,10 +9,7 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
-	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
-	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
 // Stream contains controllers related to streaming and subscribing to streaming services
@@ -30,17 +26,9 @@ func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) {
 		return
 	}
 
-	mechanism, _ := scram.Mechanism(scram.SHA512, s.E.KafkaUsername, s.E.KafkaPassword)
-	reader := kafka.NewReader(kafka.ReaderConfig{
-		Brokers:     []string{s.E.KafkaBroker},
-		GroupID:     uuid.New().String(),
-		Topic:       topic,
-		StartOffset: offset,
-		Dialer: &kafka.Dialer{
-			SASLMechanism: mechanism,
-			TLS:           &tls.Config{},
-		},
-	})
+	reader := s.C.KafkaReader(s.E, topic)
+	defer reader.Close()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3600)
 	defer cancel()
 
