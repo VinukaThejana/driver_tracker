@@ -26,7 +26,7 @@ func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) {
 		return
 	}
 
-	reader := s.C.KafkaReader(s.E, topic)
+	reader := s.C.KafkaReader(s.E, topic, offset)
 	defer reader.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3600)

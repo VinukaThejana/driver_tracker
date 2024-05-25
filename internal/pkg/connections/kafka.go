@@ -29,17 +29,16 @@ func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload string) {
 }
 
 // KafkaReader is a function that is used to intitialize a kafka reader instance
-func (c *C) KafkaReader(e *env.Env, topic string) *kafka.Reader {
+func (c *C) KafkaReader(e *env.Env, topic string, offset int64) *kafka.Reader {
 	mechanism, _ := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{e.KafkaBroker},
 		Topic:       topic,
-		StartOffset: kafka.LastOffset,
+		StartOffset: offset,
 		Dialer: &kafka.Dialer{
 			SASLMechanism: mechanism,
 			TLS:           &tls.Config{},
 		},
-		MaxBytes: 10e6,
 	})
 
 	return reader
