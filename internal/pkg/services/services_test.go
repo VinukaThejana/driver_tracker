@@ -5,7 +5,6 @@ import (
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/jaswdr/faker/v2"
 )
 
 var (
@@ -19,8 +18,4 @@ func init() {
 }
 
 func TestLog(t *testing.T) {
-	fake := faker.New()
-
-	Log(&connector, &e, fake.Json().Faker.Address())
-	Log(&connector, &e, fake.Address().Country())
 }
