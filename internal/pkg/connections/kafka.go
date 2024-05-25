@@ -1,11 +1,14 @@
 package connections
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
 // KafkaWriteToTopic is a function that is used to write to a given Kafka topic
@@ -23,4 +26,21 @@ func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload string) {
 		logger.ErrorWithMsg(err, "error sending the reqeust")
 		return
 	}
+}
+
+// KafkaReader is a function that is used to intitialize a kafka reader instance
+func (c *C) KafkaReader(e *env.Env, topic string) *kafka.Reader {
+	mechanism, _ := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
+	reader := kafka.NewReader(kafka.ReaderConfig{
+		Brokers:     []string{e.KafkaBroker},
+		Topic:       topic,
+		StartOffset: kafka.LastOffset,
+		Dialer: &kafka.Dialer{
+			SASLMechanism: mechanism,
+			TLS:           &tls.Config{},
+		},
+		MaxBytes: 10e6,
+	})
+
+	return reader
 }
