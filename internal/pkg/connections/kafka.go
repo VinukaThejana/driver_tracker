@@ -1,31 +1,26 @@
 package connections
 
 import (
-	"context"
-	"crypto/tls"
+	"fmt"
+	"net/http"
 
+	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
-	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
 // KafkaWriteToTopic is a function that is used to write to a given Kafka topic
 func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload string) {
-	mechanism, err := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
-	lib.LogFatal(err)
-
-	w := kafka.Writer{
-		Addr:  kafka.TCP(e.KafkaBroker),
-		Topic: topic,
-		Transport: &kafka.Transport{
-			SASL: mechanism,
-			TLS:  &tls.Config{},
-		},
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/produce/%s/%s", e.KafkaRestURL, topic, payload), nil)
+	if err != nil {
+		logger.ErrorWithMsg(err, "failed to create the request")
+		return
 	}
-	defer w.Close()
+	req.SetBasicAuth(e.KafkaUsername, e.KafkaPassword)
 
-	w.WriteMessages(context.Background(), kafka.Message{
-		Value: []byte(payload),
-	})
+	client := &http.Client{}
+	_, err = client.Do(req)
+	if err != nil {
+		logger.ErrorWithMsg(err, "error sending the reqeust")
+		return
+	}
 }
