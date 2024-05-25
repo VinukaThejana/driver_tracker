@@ -11,23 +11,23 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
-	"go.uber.org/zap"
 )
 
 // Stream contains controllers related to streaming and subscribing to streaming services
 type Stream struct {
 	E *env.Env
 	C *connections.C
-	L *zap.SugaredLogger
 }
 
 // Subscribe is a function that is used to subscribe to the Kafka stream from a given Offset
-func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) error {
+func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		return fmt.Errorf("failed to cast to flusher")
+		log.Error().Msg("failed to cast the type to flusher")
+		return
 	}
 
 	mechanism, _ := scram.Mechanism(scram.SHA512, s.E.KafkaUsername, s.E.KafkaPassword)
@@ -48,12 +48,13 @@ func (s *Stream) Subscribe(w http.ResponseWriter, topic string, offset int64) er
 		message, _ := reader.ReadMessage(ctx)
 		payload, err := lib.ToStr(string(message.Value))
 		if err != nil {
-			s.L.Error("Error occured when serialization and deserialization", zap.String("message", string(message.Value)), zap.Error(err))
+			log.Error().Err(err).Str("value", string(message.Value)).Msg("Error occured when serialization and deserialization")
+			return
 		}
 		payloadStr := string(payload)
 
 		data := fmt.Sprintf("data: %s\n\n", payloadStr)
-		s.L.Info(zap.String("data", data))
+		log.Info().Str("data", data)
 		fmt.Fprint(w, data)
 
 		flusher.Flush()
