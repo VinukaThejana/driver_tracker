@@ -1,6 +1,7 @@
 package connections
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net/http"
@@ -8,11 +9,31 @@ import (
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
+func getMechanism(e *env.Env) sasl.Mechanism {
+	mechanism, _ := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
+	return mechanism
+}
+
 // KafkaWriteToTopic is a function that is used to write to a given Kafka topic
-func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload string) {
+func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload []kafka.Message) {
+	w := kafka.Writer{
+		Addr:  kafka.TCP(e.KafkaBroker),
+		Topic: topic,
+		Transport: &kafka.Transport{
+			SASL: getMechanism(e),
+			TLS:  &tls.Config{},
+		},
+	}
+
+	w.WriteMessages(context.Background(), payload...)
+}
+
+// KafkaWriteToTopicWithHTTP is a function that is used to write to a given Kafka topic
+func (c *C) KafkaWriteToTopicWithHTTP(e *env.Env, topic string, payload string) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/produce/%s/%s", e.KafkaRestURL, topic, payload), nil)
 	if err != nil {
 		logger.ErrorWithMsg(err, "failed to create the request")
@@ -30,13 +51,12 @@ func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload string) {
 
 // KafkaReader is a function that is used to intitialize a kafka reader instance
 func (c *C) KafkaReader(e *env.Env, topic string, offset int64) *kafka.Reader {
-	mechanism, _ := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:     []string{e.KafkaBroker},
 		Topic:       topic,
 		StartOffset: offset,
 		Dialer: &kafka.Dialer{
-			SASLMechanism: mechanism,
+			SASLMechanism: getMechanism(e),
 			TLS:           &tls.Config{},
 		},
 	})
