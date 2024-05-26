@@ -37,12 +37,12 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 
 	contentType := r.Header.Get("Content-Type")
 	if !strings.HasPrefix(contentType, "application/json") {
+		log.Error().Str("Content-Type", contentType).Msg("invalid content type provided")
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		json.NewEncoder(w).Encode(Response{
 			"status":  "bad_request",
 			"message": "only content of type application/json can be sent",
 		})
-		log.Error().Str("Content-Type", contentType).Msg("invalid content type provided")
 		return
 	}
 
@@ -51,12 +51,12 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 
 	topic := chi.URLParam(r, "topic")
 	if topic == "" {
+		log.Error().Msg("topic is not provided")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{
 			"status":  "bad_request",
 			"message": "topic is not provided",
 		})
-		log.Error().Msg("topic is not provided")
 		return
 	}
 
@@ -65,32 +65,32 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
+			log.Error().Msg("request body is empty")
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(Response{
 				"status":  "bad_request",
 				"message": "body cannot be empty, please provide valid json",
 			})
-			log.Error().Msg("request body is empty")
 			return
 		}
 
+		log.Error().Msg("invalid request body provided by the client")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{
 			"status":  "bad_request",
 			"message": "failed to parse data invalid json",
 		})
-		log.Error().Msg("invalid request body provided by the client")
 		return
 	}
 
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
+		log.Error().Err(err).Msg("error marshaling the request body")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(Response{
 			"status":  "internal_server_error",
 			"message": "something went wrong on the server side",
 		})
-		log.Error().Err(err).Msg("error marshaling the request body")
 		return
 	}
 	dataStr := string(dataBytes)
