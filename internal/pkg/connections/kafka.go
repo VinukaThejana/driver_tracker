@@ -27,6 +27,7 @@ func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload []kafka.Message)
 			SASL: getMechanism(e),
 			TLS:  &tls.Config{},
 		},
+		AllowAutoTopicCreation: true,
 	}
 
 	w.WriteMessages(context.Background(), payload...)
