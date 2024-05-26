@@ -95,7 +95,7 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	dataStr := string(dataBytes)
 
-	add.C.KafkaWriteToTopic(add.E, topic, dataStr)
+	add.C.KafkaWriteToTopicWithHTTP(add.E, topic, dataStr)
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{
