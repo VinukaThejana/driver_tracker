@@ -70,12 +70,12 @@ func router() *chi.Mux {
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
 
-	r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
+	r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
 	r.MethodFunc(healthR.Method(), healthR.Path(), healthR.Handler)
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(middlewares.CheckContentTypeIsJSON)
-		r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
+		r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
 		r.MethodFunc(createR.Method(), createR.Path(), createR.Handler)
 	})
 
