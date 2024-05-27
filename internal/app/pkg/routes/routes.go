@@ -23,7 +23,7 @@ func sendJSONResponse(w http.ResponseWriter, statusCode int, message string) {
 	})
 }
 
-func sendJSONResponseWInterface(w http.ResponseWriter, statusCode int, res interface{}) {
+func sendJSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(res)
