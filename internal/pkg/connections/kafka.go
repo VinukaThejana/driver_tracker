@@ -18,6 +18,20 @@ func getMechanism(e *env.Env) sasl.Mechanism {
 	return mechanism
 }
 
+// InitKafka is a function that is used to initialize the kafka connection
+func (c *C) GetKafkaConnection(e *env.Env) (*kafka.Dialer, *kafka.Conn, error) {
+	dialer := &kafka.Dialer{
+		SASLMechanism: getMechanism(e),
+		TLS:           &tls.Config{},
+	}
+
+	conn, err := dialer.Dial("tcp", e.KafkaBroker)
+	if err != nil {
+		return nil, nil, err
+	}
+	return dialer, conn, nil
+}
+
 // KafkaWriteToTopic is a function that is used to write to a given Kafka topic
 func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload []kafka.Message) {
 	w := kafka.Writer{
