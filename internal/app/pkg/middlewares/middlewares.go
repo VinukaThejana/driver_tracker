@@ -9,8 +9,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// CheckContentIsJSON is a middleware that checks wether the application content is json
-func CheckContentIsJSON(next http.Handler) http.Handler {
+// CheckContentTypeIsJSON is a middleware that checks wether the application content is json
+func CheckContentTypeIsJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "application/json") {
