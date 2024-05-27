@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -64,6 +65,7 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 		sendJSONResponse(w, http.StatusBadRequest, "failed to parse data invalid json")
 		return
 	}
+	data["timestamp"] = time.Now().UTC().Unix()
 
 	dataBytes, err := json.Marshal(data)
 	if err != nil {
