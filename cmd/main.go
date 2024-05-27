@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -28,6 +28,7 @@ var (
 	addR    routes.Route
 	viewR   routes.Route
 	healthR routes.Route
+	createR routes.Route
 )
 
 func init() {
@@ -50,24 +51,33 @@ func init() {
 		E: &e,
 		C: &connector,
 	}
+	createR = &routes.CreateStream{
+		E: &e,
+		C: &connector,
+	}
 }
 
 func router() *chi.Mux {
 	r := chi.NewRouter()
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	r.Use(middlewares.RequestID)
+	r.Use(middlewares.RealIP)
+	r.Use(middlewares.Logger)
+	r.Use(middlewares.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"https://*", "http://*"},
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
 
-	r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
 	r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
 	r.MethodFunc(healthR.Method(), healthR.Path(), healthR.Handler)
+
+	r.Route("/", func(r chi.Router) {
+		r.Use(middlewares.CheckContentTypeIsJSON)
+		r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
+		r.MethodFunc(createR.Method(), createR.Path(), createR.Handler)
+	})
 
 	return r
 }
