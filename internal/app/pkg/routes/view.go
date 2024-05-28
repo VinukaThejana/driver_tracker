@@ -1,12 +1,16 @@
 package routes
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/controllers"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
 
@@ -46,10 +50,31 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 	default:
 	}
 
-	streamC := controllers.Stream{
-		E: view.E,
-		C: view.C,
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		log.Error().Msg("failed to cast the type to flusher")
+		return
 	}
 
-	streamC.Subscribe(w, topic, offset)
+	reader := view.C.KafkaReader(view.E, topic, offset)
+	defer reader.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3600)
+	defer cancel()
+
+	for {
+		message, _ := reader.ReadMessage(ctx)
+		payload, err := lib.ToStr(string(message.Value))
+		if err != nil {
+			log.Error().Err(err).Str("value", string(message.Value)).Msg("Error occured when serialization and deserialization")
+			return
+		}
+		payloadStr := string(payload)
+
+		data := fmt.Sprintf("data: %s\n\n", payloadStr)
+		log.Info().Str("data", data)
+		fmt.Fprint(w, data)
+
+		flusher.Flush()
+	}
 }
