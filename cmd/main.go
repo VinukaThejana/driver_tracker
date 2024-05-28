@@ -13,10 +13,12 @@ import (
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/websockets"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/lesismal/nbio/nbhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -29,6 +31,8 @@ var (
 	viewR   routes.Route
 	healthR routes.Route
 	createR routes.Route
+
+	viewW websockets.Websocket
 )
 
 func init() {
@@ -52,6 +56,11 @@ func init() {
 		C: &connector,
 	}
 	createR = &routes.CreateStream{
+		E: &e,
+		C: &connector,
+	}
+
+	viewW = &websockets.View{
 		E: &e,
 		C: &connector,
 	}
@@ -79,14 +88,18 @@ func router() *chi.Mux {
 		r.MethodFunc(createR.Method(), createR.Path(), createR.Handler)
 	})
 
+	r.Route("/ws", func(r chi.Router) {
+		r.MethodFunc(viewW.Method(), viewW.Path(), viewW.Handler)
+	})
+
 	return r
 }
 
-func shutdown(ctx context.Context, server *http.Server) {
-	shutdownCtx, shutdownCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer shutdownCancel()
+func shutdown(ctx context.Context, engine *nbhttp.Engine) {
+	shutdownCtx, shutdownCtxCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer shutdownCtxCancel()
 
-	if err := server.Shutdown(shutdownCtx); err != nil {
+	if err := engine.Shutdown(shutdownCtx); err != nil {
 		log.Error().Err(err).Msg("failed to shudown server gracefully")
 		return
 	}
@@ -100,6 +113,12 @@ func main() {
 		Handler: router(),
 	}
 
+	engine := nbhttp.NewEngine(nbhttp.Config{
+		Network: "tcp",
+		Addrs:   []string{server.Addr},
+	})
+	engine.Handler = server.Handler
+
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 
@@ -112,7 +131,7 @@ func main() {
 		case <-ctx.Done():
 			return
 		default:
-			if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			if err := engine.Start(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				log.Error().Err(err).Msg("HTTP server error")
 				return
 			}
@@ -122,11 +141,11 @@ func main() {
 	select {
 	case sig := <-signalCh:
 		log.Info().Str("cause", "signal").Str("signal", sig.String()).Msg("shutting down server")
-		shutdown(ctx, server)
+		shutdown(ctx, engine)
 		cancel()
 	case <-ctx.Done():
 		log.Info().Msg("context cancelled, shutting down the server")
-		shutdown(ctx, server)
+		shutdown(ctx, engine)
 		cancel()
 	}
 }
