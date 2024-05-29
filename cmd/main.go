@@ -84,6 +84,10 @@ func router() *chi.Mux {
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
 
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, e.ApiDoc, http.StatusMovedPermanently)
+	})
+
 	r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
 	r.MethodFunc(healthR.Method(), healthR.Path(), healthR.Handler)
 
