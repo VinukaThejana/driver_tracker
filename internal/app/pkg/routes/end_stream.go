@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
+	"github.com/segmentio/kafka-go"
 )
 
 // EndStream is a route used by the driver to end the stream
@@ -75,6 +77,11 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 
 	err = controllerConn.DeleteTopics(fmt.Sprintf("%d", reqBody.DriverID))
 	if err != nil {
+		if errors.Is(err, kafka.UnknownTopicID) || errors.Is(err, kafka.UnknownTopicOrPartition) {
+			sendJSONResponse(w, http.StatusBadRequest, fmt.Sprintf("driver of id : %d does not have an active stream", reqBody.DriverID))
+			return
+		}
+
 		log.Error().Err(err).Msg("failed to delete the topic")
 		sendJSONResponse(w, http.StatusInternalServerError, "failed to end the stream")
 		return
