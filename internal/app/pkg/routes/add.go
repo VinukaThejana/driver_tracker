@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -33,14 +32,6 @@ func (add *Add) Path() string {
 // Handler is the bussiness logic of the Add route
 func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	const maxRequestBodySize = 1 << 20
-
-	contentType := r.Header.Get("Content-Type")
-	if !strings.HasPrefix(contentType, "application/json") {
-		log.Error().Str("Content-Type", contentType).Msg("invalid content type provided")
-		sendJSONResponse(w, http.StatusBadRequest, "only content of type application/json can be sent")
-		return
-	}
-
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
@@ -75,7 +66,16 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	dataStr := string(dataBytes)
 
-	add.C.KafkaWriteToTopicWithHTTP(add.E, topic, dataStr)
+	err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, dataStr)
+	if err != nil {
+		log.Error().Err(err).Msg("error sending the message to the topic")
+		if errors.Is(err, connections.ErrKafkaNoTopic) {
+			sendJSONResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong")
+		return
+	}
 
 	sendJSONResponse(w, http.StatusOK, "added the message to the topic")
 }

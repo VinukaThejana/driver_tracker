@@ -5,20 +5,23 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net/http"
+	"time"
 
-	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
+// ErrKafkaNoTopic is an error that occurs when there is no topic for given driver
+var ErrKafkaNoTopic = fmt.Errorf("there is no stream associated with the given driver")
+
 func getMechanism(e *env.Env) sasl.Mechanism {
 	mechanism, _ := scram.Mechanism(scram.SHA512, e.KafkaUsername, e.KafkaPassword)
 	return mechanism
 }
 
-// InitKafka is a function that is used to initialize the kafka connection
+// GetKafkaConnection is a function that is used to initialize the kafka connection
 func (c *C) GetKafkaConnection(e *env.Env) (*kafka.Dialer, *kafka.Conn, error) {
 	dialer := &kafka.Dialer{
 		SASLMechanism: getMechanism(e),
@@ -48,20 +51,26 @@ func (c *C) KafkaWriteToTopic(e *env.Env, topic string, payload []kafka.Message)
 }
 
 // KafkaWriteToTopicWithHTTP is a function that is used to write to a given Kafka topic
-func (c *C) KafkaWriteToTopicWithHTTP(e *env.Env, topic string, payload string) {
+func (c *C) KafkaWriteToTopicWithHTTP(e *env.Env, topic string, payload string) error {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/produce/%s/%s", e.KafkaRestURL, topic, payload), nil)
 	if err != nil {
-		logger.ErrorWithMsg(err, "failed to create the request")
-		return
+		return err
 	}
 	req.SetBasicAuth(e.KafkaUsername, e.KafkaPassword)
 
-	client := &http.Client{}
-	_, err = client.Do(req)
-	if err != nil {
-		logger.ErrorWithMsg(err, "error sending the reqeust")
-		return
+	client := &http.Client{
+		Timeout: time.Second,
 	}
+	res, err := client.Do(req)
+	if err != nil {
+		return ErrKafkaNoTopic
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return ErrKafkaNoTopic
+	}
+	return nil
 }
 
 // KafkaReader is a function that is used to intitialize a kafka reader instance
