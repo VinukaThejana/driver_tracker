@@ -31,6 +31,7 @@ var (
 	viewR   routes.Route
 	healthR routes.Route
 	createR routes.Route
+	endR    routes.Route
 
 	viewW websockets.Websocket
 )
@@ -56,6 +57,10 @@ func init() {
 		C: &connector,
 	}
 	createR = &routes.CreateStream{
+		E: &e,
+		C: &connector,
+	}
+	endR = &routes.EndStream{
 		E: &e,
 		C: &connector,
 	}
@@ -86,6 +91,7 @@ func router() *chi.Mux {
 		r.Use(middlewares.CheckContentTypeIsJSON)
 		r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
 		r.MethodFunc(createR.Method(), createR.Path(), createR.Handler)
+		r.MethodFunc(endR.Method(), endR.Path(), endR.Handler)
 	})
 
 	r.Route("/ws", func(r chi.Router) {
