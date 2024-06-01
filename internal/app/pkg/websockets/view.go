@@ -1,7 +1,11 @@
 package websockets
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -35,13 +39,26 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isDriver := true
+
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
+
+	if isDriver {
+		upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
+			if !json.Valid(b) {
+				log.Error().Msg("provided data is not valid json")
+				return
+			}
+			data := strings.TrimSuffix(string(b), "}") + fmt.Sprintf(`, "timestamp": %d`, time.Now().UTC().Unix()) + "}"
+			view.C.KafkaWriteToTopicWithHTTP(view.E, topic, data)
+		})
+	}
+
 	upgrader.OnOpen(func(c *websocket.Conn) {
 		log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection opened")
-
 		done := make(chan struct{})
 
 		go func() {
