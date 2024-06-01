@@ -34,6 +34,7 @@ var (
 	endR    routes.Route
 
 	viewW websockets.Websocket
+	addW  websockets.Websocket
 )
 
 func init() {
@@ -69,6 +70,10 @@ func init() {
 		E: &e,
 		C: &connector,
 	}
+	addW = &websockets.Add{
+		E: &e,
+		C: &connector,
+	}
 }
 
 func router() *chi.Mux {
@@ -100,6 +105,7 @@ func router() *chi.Mux {
 
 	r.Route("/ws", func(r chi.Router) {
 		r.MethodFunc(viewW.Method(), viewW.Path(), viewW.Handler)
+		r.MethodFunc(addW.Method(), addW.Path(), addW.Handler)
 	})
 
 	return r
