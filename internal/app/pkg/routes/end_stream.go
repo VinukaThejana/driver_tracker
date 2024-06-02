@@ -42,6 +42,7 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 	v := validator.New()
 
 	if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+		log.Error().Err(err).Msg("failed to decode the request body")
 		sendJSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
 		return
 	}

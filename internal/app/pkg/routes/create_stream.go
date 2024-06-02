@@ -44,7 +44,7 @@ func (create *CreateStream) Handler(w http.ResponseWriter, r *http.Request) {
 	var reqBody body
 	v := validator.New()
 
-	if err := sonic.ConfigDefault.NewDecoder(r.Body); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 		sendJSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
 		return
 	}
@@ -91,8 +91,7 @@ func (create *CreateStream) Handler(w http.ResponseWriter, r *http.Request) {
 
 	sendJSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
 		"sub_url": map[string]interface{}{
-			"ws":   fmt.Sprintf("ws://%s/ws/view/%s", create.E.Host, reqBody.BookingID),
-			"http": fmt.Sprintf("%s/view/%s", create.E.Domain, reqBody.BookingID),
+			"ws": fmt.Sprintf("ws://%s/ws/view/%s", create.E.Host, reqBody.BookingID),
 		},
 		"pub_url": map[string]interface{}{
 			"ws":   fmt.Sprintf("ws://%s/ws/add/%s", create.E.Host, reqBody.BookingID),
