@@ -39,20 +39,14 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 	offset := kafka.LastOffset
 
 	topic := chi.URLParam(r, "topic")
-	switch topic {
-	case "":
-		topic = view.E.KafkaTopic
-	case "log":
-		offset = kafka.LastOffset
-	case "logs":
-		topic = "log"
-		offset = kafka.FirstOffset
-	default:
+	if topic == "" {
+		http.Error(w, "subscribe to a valid booking id", http.StatusBadRequest)
+		return
 	}
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		log.Error().Msg("failed to cast the type to flusher")
+		http.Error(w, "streaming is not supported", http.StatusBadRequest)
 		return
 	}
 
@@ -67,6 +61,7 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 		payload, err := lib.ToStr(string(message.Value))
 		if err != nil {
 			log.Error().Err(err).Str("value", string(message.Value)).Msg("Error occured when serialization and deserialization")
+			http.Error(w, "something went wrong", http.StatusInternalServerError)
 			return
 		}
 		payloadStr := string(payload)
