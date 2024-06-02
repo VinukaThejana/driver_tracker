@@ -93,9 +93,9 @@ func router() *chi.Mux {
 		http.Redirect(w, r, e.ApiDoc, http.StatusMovedPermanently)
 	})
 
-	r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
 	r.MethodFunc(healthR.Method(), healthR.Path(), healthR.Handler)
 
+	r.MethodFunc(viewR.Method(), viewR.Path(), viewR.Handler)
 	r.Route("/", func(r chi.Router) {
 		r.Use(middlewares.CheckContentTypeIsJSON)
 		r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
@@ -130,10 +130,11 @@ func main() {
 	}
 
 	engine := nbhttp.NewEngine(nbhttp.Config{
-		Network: "tcp",
-		Addrs:   []string{server.Addr},
+		Network:       "tcp",
+		Addrs:         []string{server.Addr},
+		KeepaliveTime: time.Second * 60 * 60,
+		Handler:       server.Handler,
 	})
-	engine.Handler = server.Handler
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
