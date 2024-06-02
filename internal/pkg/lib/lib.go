@@ -2,9 +2,8 @@
 package lib
 
 import (
-	"encoding/json"
-
 	"github.com/VinukaThejana/go-utils/logger"
+	"github.com/bytedance/sonic"
 )
 
 // LogFatal is a function that is used to Run various functions that need to crash if an error is found
@@ -16,16 +15,18 @@ func LogFatal(err error) {
 
 // ToStr is a function that is used to convert bad json strings to nicer json bytes
 func ToStr(jsonStr string) ([]byte, error) {
-	var payload map[string]interface{}
-	err := json.Unmarshal([]byte(jsonStr), &payload)
-	if err != nil {
-		return []byte(jsonStr), err
+	var (
+		data    map[string]interface{}
+		payload []byte
+		err     error
+	)
+
+	if err = sonic.UnmarshalString(jsonStr, &data); err != nil {
+		return nil, err
+	}
+	if payload, err = sonic.Marshal(data); err != nil {
+		return nil, err
 	}
 
-	payloadBytes, err := json.Marshal(payload)
-	if err != nil {
-		return []byte(jsonStr), err
-	}
-
-	return payloadBytes, nil
+	return payload, nil
 }

@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
@@ -42,9 +42,13 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var data map[string]interface{}
+	var (
+		data    map[string]interface{}
+		payload string
+		err     error
+	)
 
-	err := json.NewDecoder(r.Body).Decode(&data)
+	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			log.Error().Msg("request body is empty")
@@ -58,15 +62,14 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	data["timestamp"] = time.Now().UTC().Unix()
 
-	dataBytes, err := json.Marshal(data)
+	payload, err = sonic.MarshalString(data)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshaling the request body")
 		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong on the server side")
 		return
 	}
-	dataStr := string(dataBytes)
 
-	err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, dataStr)
+	err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, payload)
 	if err != nil {
 		log.Error().Err(err).Msg("error sending the message to the topic")
 		if errors.Is(err, connections.ErrKafkaNoTopic) {

@@ -1,12 +1,10 @@
 package websockets
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
@@ -44,12 +42,26 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
-		if !json.Valid(b) {
-			log.Error().Msg("provided data is not valid json")
+		var (
+			data    map[string]interface{}
+			payload string
+			err     error
+		)
+
+		if err = sonic.UnmarshalString(string(b), &data); err != nil {
+			log.Error().Err(err).Msg("provide valid JSON data")
 			return
 		}
-		data := strings.TrimSuffix(string(b), "}") + fmt.Sprintf(`, "timestamp": %d`, time.Now().UTC().Unix()) + "}"
-		add.C.KafkaWriteToTopicWithHTTP(add.E, topic, data)
+		data["timestamp"] = time.Now().UTC().Unix()
+		if payload, err = sonic.MarshalString(data); err != nil {
+			log.Error().Err(err).Msg("failed to marshal data")
+			return
+		}
+
+		if err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, payload); err != nil {
+			log.Error().Err(err).Msg("failed to write data to kafka")
+			return
+		}
 	})
 	upgrader.OnOpen(func(c *websocket.Conn) {
 		log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection opened")

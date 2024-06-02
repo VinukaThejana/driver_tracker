@@ -2,8 +2,9 @@
 package routes
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/bytedance/sonic"
 )
 
 type response map[string]interface{}
@@ -18,7 +19,7 @@ type Route interface {
 func sendJSONResponse(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(response{
+	sonic.ConfigDefault.NewEncoder(w).Encode(response{
 		"message": message,
 	})
 }
@@ -26,5 +27,5 @@ func sendJSONResponse(w http.ResponseWriter, statusCode int, message string) {
 func sendJSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[string]interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(res)
+	sonic.ConfigDefault.NewEncoder(w).Encode(res)
 }

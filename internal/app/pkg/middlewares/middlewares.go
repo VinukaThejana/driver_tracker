@@ -2,10 +2,10 @@
 package middlewares
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
 )
@@ -55,9 +55,10 @@ func CheckContentTypeIsJSON(next http.Handler) http.Handler {
 			log.Error().Str("Content-Type", contentType).Msg("invalid content type provided")
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]interface{}{
-				"message": "only conent type of application/json is allowed",
-			})
+			sonic.ConfigDefault.NewEncoder(w).Encode(
+				map[string]interface{}{
+					"message": "only conent type of application/json is allowed",
+				})
 			return
 		}
 

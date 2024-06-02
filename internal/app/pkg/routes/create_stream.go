@@ -1,12 +1,12 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"strconv"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-playground/validator/v10"
@@ -44,7 +44,7 @@ func (create *CreateStream) Handler(w http.ResponseWriter, r *http.Request) {
 	var reqBody body
 	v := validator.New()
 
-	if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+	if err := sonic.ConfigDefault.NewDecoder(r.Body); err != nil {
 		sendJSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
 		return
 	}

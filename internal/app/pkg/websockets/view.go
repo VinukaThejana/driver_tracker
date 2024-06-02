@@ -1,12 +1,10 @@
 package websockets
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
@@ -35,7 +33,7 @@ func (view *View) Path() string {
 func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 	topic := chi.URLParam(r, "topic")
 	if topic == "" {
-		log.Error().Msg("topic is not provided")
+		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
 	}
 
@@ -48,12 +46,26 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 
 	if isDriver {
 		upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
-			if !json.Valid(b) {
-				log.Error().Msg("provided data is not valid json")
+			var (
+				data    map[string]interface{}
+				payload string
+				err     error
+			)
+
+			if err = sonic.UnmarshalString(string(b), &data); err != nil {
+				log.Error().Err(err).Msg("provide valid JSON data")
 				return
 			}
-			data := strings.TrimSuffix(string(b), "}") + fmt.Sprintf(`, "timestamp": %d`, time.Now().UTC().Unix()) + "}"
-			view.C.KafkaWriteToTopicWithHTTP(view.E, topic, data)
+			data["timestamp"] = time.Now().UTC().Unix()
+			if payload, err = sonic.MarshalString(data); err != nil {
+				log.Error().Err(err).Msg("failed to marshal data")
+				return
+			}
+
+			if err = view.C.KafkaWriteToTopicWithHTTP(view.E, topic, payload); err != nil {
+				log.Error().Err(err).Msg("failed to write data to kafka")
+				return
+			}
 		})
 	}
 
