@@ -75,10 +75,10 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer controllerConn.Close()
 
-	err = controllerConn.DeleteTopics(fmt.Sprintf("%d", reqBody.DriverID))
+	err = controllerConn.DeleteTopics(reqBody.BookingID)
 	if err != nil {
 		if errors.Is(err, kafka.UnknownTopicID) || errors.Is(err, kafka.UnknownTopicOrPartition) {
-			sendJSONResponse(w, http.StatusBadRequest, fmt.Sprintf("driver of id : %d does not have an active stream", reqBody.DriverID))
+			sendJSONResponse(w, http.StatusBadRequest, fmt.Sprintf("driver of id : %s does not have an active stream", reqBody.BookingID))
 			return
 		}
 

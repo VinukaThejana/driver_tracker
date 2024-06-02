@@ -31,7 +31,7 @@ func (create *CreateStream) Path() string {
 }
 
 type body struct {
-	DriverID int `json:"driver_id" validate:"required,min=1"`
+	BookingID string `json:"booking_id" validate:"required,min=1"`
 }
 
 // Handler contains the bussiness logic of the createStream route
@@ -79,7 +79,7 @@ func (create *CreateStream) Handler(w http.ResponseWriter, r *http.Request) {
 	defer controllerConn.Close()
 
 	err = controllerConn.CreateTopics(kafka.TopicConfig{
-		Topic:             fmt.Sprintf("%d", reqBody.DriverID),
+		Topic:             reqBody.BookingID,
 		NumPartitions:     1,
 		ReplicationFactor: 1,
 	})
@@ -90,7 +90,13 @@ func (create *CreateStream) Handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
-		"sub_url": fmt.Sprintf("%s/view/%d", create.E.Domain, reqBody.DriverID),
-		"pub_url": fmt.Sprintf("%s/add/%d", create.E.Domain, reqBody.DriverID),
+		"sub_url": map[string]interface{}{
+			"ws":   fmt.Sprintf("ws://%s/ws/view/%s", create.E.Host, reqBody.BookingID),
+			"http": fmt.Sprintf("%s/view/%s", create.E.Domain, reqBody.BookingID),
+		},
+		"pub_url": map[string]interface{}{
+			"ws":   fmt.Sprintf("ws://%s/ws/add/%s", create.E.Host, reqBody.BookingID),
+			"http": fmt.Sprintf("%s/add/%s", create.E.Domain, reqBody.BookingID),
+		},
 	})
 }
