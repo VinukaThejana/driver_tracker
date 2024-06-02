@@ -23,6 +23,7 @@ type Env struct {
 	KafkaRestURL   string `mapstructure:"KAFKA_REST_URL" validate:"required,url"`
 	RedisLoggerURL string `mapstructure:"REDIS_LOGGER_URL" validate:"required"`
 	Domain         string `mapstructure:"DOMAIN" validate:"required,url"`
+	Host           string `mapstructure:"HOST" validate:"required"`
 	ApiDoc         string `mapstructure:"API_DOC" validate:"required,url"`
 	Port           int    `mapstructure:"PORT" validate:"required"`
 }
