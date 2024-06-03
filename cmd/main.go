@@ -45,35 +45,16 @@ func init() {
 		Out: os.Stderr,
 	})
 
-	addR = &routes.Add{
-		E: &e,
-		C: &connector,
-	}
-	viewR = &routes.View{
-		E: &e,
-		C: &connector,
-	}
-	healthR = &routes.Health{
-		E: &e,
-		C: &connector,
-	}
-	createR = &routes.CreateStream{
-		E: &e,
-		C: &connector,
-	}
-	endR = &routes.EndStream{
-		E: &e,
-		C: &connector,
-	}
+	routeConfig := routes.NewConfig(&e, &connector)
+	websocketConfig := websockets.NewConfig(&e, &connector)
 
-	viewW = &websockets.View{
-		E: &e,
-		C: &connector,
-	}
-	addW = &websockets.Add{
-		E: &e,
-		C: &connector,
-	}
+	addR = routeConfig[routes.RouteTypeAdd]
+	createR = routeConfig[routes.RouteTypeCreate]
+	endR = routeConfig[routes.RouteTypeEnd]
+	healthR = routeConfig[routes.RouteTypeHealth]
+
+	viewW = websocketConfig[websockets.WebsocketTypeView]
+	addW = websocketConfig[websockets.WebsocketTypeAdd]
 }
 
 func router() *chi.Mux {
