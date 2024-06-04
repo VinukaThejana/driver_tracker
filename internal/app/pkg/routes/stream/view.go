@@ -1,4 +1,4 @@
-package routes
+package stream
 
 import (
 	"context"
@@ -14,24 +14,8 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// View is used to view messages on a given topic
-type View struct {
-	E *env.Env
-	C *connections.C
-}
-
-// Method is a used to get the Method of the view route
-func (view *View) Method() string {
-	return http.MethodGet
-}
-
-// Path is used to get the Path of the view route
-func (view *View) Path() string {
-	return "/view/{topic}"
-}
-
-// Handler is used to get the Handler of the view route
-func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
+// View is a route that is used to listen to the stream
+func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "Keep-alive")
@@ -50,7 +34,7 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reader := view.C.KafkaReader(view.E, topic, offset)
+	reader := c.KafkaReader(e, topic, offset)
 	defer reader.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3600)

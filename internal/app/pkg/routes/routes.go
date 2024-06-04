@@ -2,67 +2,21 @@
 package routes
 
 import (
-	"net/http"
-
-	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/index"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/stream"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/go-chi/chi/v5"
 )
 
-// Route interface consits methods that should be implmented by a specific route
-type Route interface {
-	Method() string
-	Path() string
-	Handler(http.ResponseWriter, *http.Request)
+// Route contains various third party connections and eviromental variables that are used throughout the routes
+type Route struct {
+	E *env.Env
+	C *connections.C
 }
 
-type response map[string]interface{}
-
-type RouteType uint8
-
-const (
-	// RouteTypeAdd is the add route
-	RouteTypeAdd RouteType = iota
-	// RouteTypeCreate is the create route
-	RouteTypeCreate
-	// RouteTypeEnd is the end route
-	RouteTypeEnd
-	// RouteTypeHealth is the health route
-	RouteTypeHealth
-)
-
-// NewConfig is a config contaning all the routes
-func NewConfig(e *env.Env, c *connections.C) map[RouteType]Route {
-	return map[RouteType]Route{
-		RouteTypeAdd: &Add{
-			E: e,
-			C: c,
-		},
-		RouteTypeCreate: &CreateStream{
-			E: e,
-			C: c,
-		},
-		RouteTypeEnd: &EndStream{
-			E: e,
-			C: c,
-		},
-		RouteTypeHealth: &Health{
-			E: e,
-			C: c,
-		},
-	}
-}
-
-func sendJSONResponse(w http.ResponseWriter, statusCode int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	sonic.ConfigDefault.NewEncoder(w).Encode(response{
-		"message": message,
-	})
-}
-
-func sendJSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	sonic.ConfigDefault.NewEncoder(w).Encode(res)
+// Routes contains all the HTTP routes
+func (route *Route) Routes(r *chi.Mux) {
+	index.Index(r, route.E)
+	stream.Stream(r, route.E, route.C)
 }

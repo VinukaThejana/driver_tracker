@@ -27,11 +27,8 @@ var (
 	e         env.Env
 	connector connections.C
 
-	addR    routes.Route
-	viewR   routes.Route
-	healthR routes.Route
-	createR routes.Route
-	endR    routes.Route
+	rt routes.Route
+	ws websockets.Websocket
 
 	viewW websockets.Websocket
 	addW  websockets.Websocket
@@ -45,16 +42,14 @@ func init() {
 		Out: os.Stderr,
 	})
 
-	routeConfig := routes.NewConfig(&e, &connector)
-	websocketConfig := websockets.NewConfig(&e, &connector)
-
-	addR = routeConfig[routes.RouteTypeAdd]
-	createR = routeConfig[routes.RouteTypeCreate]
-	endR = routeConfig[routes.RouteTypeEnd]
-	healthR = routeConfig[routes.RouteTypeHealth]
-
-	viewW = websocketConfig[websockets.WebsocketTypeView]
-	addW = websocketConfig[websockets.WebsocketTypeAdd]
+	rt = routes.Route{
+		E: &e,
+		C: &connector,
+	}
+	ws = websockets.Websocket{
+		E: &e,
+		C: &connector,
+	}
 }
 
 func router() *chi.Mux {
@@ -70,23 +65,8 @@ func router() *chi.Mux {
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, e.ApiDoc, http.StatusMovedPermanently)
-	})
-
-	r.MethodFunc(healthR.Method(), healthR.Path(), healthR.Handler)
-
-	r.Route("/", func(r chi.Router) {
-		r.Use(middlewares.CheckContentTypeIsJSON)
-		r.MethodFunc(addR.Method(), addR.Path(), addR.Handler)
-		r.MethodFunc(createR.Method(), createR.Path(), createR.Handler)
-		r.MethodFunc(endR.Method(), endR.Path(), endR.Handler)
-	})
-
-	r.Route("/ws", func(r chi.Router) {
-		r.MethodFunc(viewW.Method(), viewW.Path(), viewW.Handler)
-		r.MethodFunc(addW.Method(), addW.Path(), addW.Handler)
-	})
+	rt.Routes(r)
+	ws.Websocket(r)
 
 	return r
 }

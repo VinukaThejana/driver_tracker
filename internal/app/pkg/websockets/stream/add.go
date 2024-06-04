@@ -1,4 +1,4 @@
-package websockets
+package stream
 
 import (
 	"net/http"
@@ -12,24 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Add contains the websocket to add to the connected topic
-type Add struct {
-	E *env.Env
-	C *connections.C
-}
-
-// Method of the add method
-func (add *Add) Method() string {
-	return http.MethodGet
-}
-
-// Path is the path of the add websocket
-func (add *Add) Path() string {
-	return "/add/{topic}"
-}
-
-// Handler is the bussiness logic of the add websocket
-func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
+func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	topic := chi.URLParam(r, "topic")
 	if topic == "" {
 		log.Error().Msg("topic is not provided")
@@ -58,7 +41,7 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, payload); err != nil {
+		if err = c.KafkaWriteToTopicWithHTTP(e, topic, payload); err != nil {
 			log.Error().Err(err).Msg("failed to write data to kafka")
 			return
 		}

@@ -1,4 +1,4 @@
-package routes
+package stream
 
 import (
 	"errors"
@@ -10,29 +10,14 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
 
-// EndStream is a route used by the driver to end the stream
-type EndStream struct {
-	E *env.Env
-	C *connections.C
-}
-
-// Method contains the method of the EndStream rotue
-func (end *EndStream) Method() string {
-	return http.MethodPost
-}
-
-// Path contains the HTTP path for the endStream route
-func (end *EndStream) Path() string {
-	return "/end"
-}
-
-// Handler contians the logic of the endStream route
-func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
+// End is a route that is used to end a given stream
+func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 20
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
@@ -43,20 +28,20 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 
 	if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody); err != nil {
 		log.Error().Err(err).Msg("failed to decode the request body")
-		sendJSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
+		lib.JSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
 		return
 	}
 
 	if err := v.Struct(reqBody); err != nil {
 		log.Error().Err(err).Msg("validation error, invalid data is provided")
-		sendJSONResponse(w, http.StatusBadRequest, "please provide a proper driver id")
+		lib.JSONResponse(w, http.StatusBadRequest, "please provide a proper driver id")
 		return
 	}
 
-	dialer, conn, err := end.C.GetKafkaConnection(end.E)
+	dialer, conn, err := c.GetKafkaConnection(e)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to end kafka connection")
-		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
 		return
 	}
 	defer conn.Close()
@@ -64,14 +49,14 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 	controller, err := conn.Controller()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to connecto to kafka")
-		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
 		return
 	}
 
 	controllerConn, err := dialer.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to end the controller connection")
-		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
 		return
 	}
 	defer controllerConn.Close()
@@ -79,14 +64,14 @@ func (end *EndStream) Handler(w http.ResponseWriter, r *http.Request) {
 	err = controllerConn.DeleteTopics(reqBody.BookingID)
 	if err != nil {
 		if errors.Is(err, kafka.UnknownTopicID) || errors.Is(err, kafka.UnknownTopicOrPartition) {
-			sendJSONResponse(w, http.StatusBadRequest, fmt.Sprintf("driver of id : %s does not have an active stream", reqBody.BookingID))
+			lib.JSONResponse(w, http.StatusBadRequest, fmt.Sprintf("driver of id : %s does not have an active stream", reqBody.BookingID))
 			return
 		}
 
 		log.Error().Err(err).Msg("failed to delete the topic")
-		sendJSONResponse(w, http.StatusInternalServerError, "failed to end the stream")
+		lib.JSONResponse(w, http.StatusInternalServerError, "failed to end the stream")
 		return
 	}
 
-	sendJSONResponse(w, http.StatusOK, "ended the stream")
+	lib.JSONResponse(w, http.StatusOK, "ended the stream")
 }

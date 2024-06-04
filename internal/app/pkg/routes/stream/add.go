@@ -1,4 +1,4 @@
-package routes
+package stream
 
 import (
 	"errors"
@@ -9,28 +9,13 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
-// Add a message to given Kafka topic
-type Add struct {
-	E *env.Env
-	C *connections.C
-}
-
-// Method HTTP method used by the Add route
-func (add *Add) Method() string {
-	return http.MethodPost
-}
-
-// Path is the route path used by the Add route
-func (add *Add) Path() string {
-	return "/add/{topic}"
-}
-
-// Handler is the bussiness logic of the Add route
-func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
+// add is a route that is used to add data to the stream
+func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 20
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
@@ -38,7 +23,7 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	topic := chi.URLParam(r, "topic")
 	if topic == "" {
 		log.Error().Msg("topic is not provided")
-		sendJSONResponse(w, http.StatusBadRequest, "topic is not provided")
+		lib.JSONResponse(w, http.StatusBadRequest, "topic is not provided")
 		return
 	}
 
@@ -52,12 +37,12 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			log.Error().Msg("request body is empty")
-			sendJSONResponse(w, http.StatusBadRequest, "body cannot be empty, please provide valid json")
+			lib.JSONResponse(w, http.StatusBadRequest, "body cannot be empty, please provide valid json")
 			return
 		}
 
 		log.Error().Msg("invalid request body provided by the client")
-		sendJSONResponse(w, http.StatusBadRequest, "failed to parse data invalid json")
+		lib.JSONResponse(w, http.StatusBadRequest, "failed to parse data invalid json")
 		return
 	}
 	data["timestamp"] = time.Now().UTC().Unix()
@@ -65,20 +50,20 @@ func (add *Add) Handler(w http.ResponseWriter, r *http.Request) {
 	payload, err = sonic.MarshalString(data)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshaling the request body")
-		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong on the server side")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on the server side")
 		return
 	}
 
-	err = add.C.KafkaWriteToTopicWithHTTP(add.E, topic, payload)
+	err = c.KafkaWriteToTopicWithHTTP(e, topic, payload)
 	if err != nil {
 		log.Error().Err(err).Msg("error sending the message to the topic")
 		if errors.Is(err, connections.ErrKafkaNoTopic) {
-			sendJSONResponse(w, http.StatusBadRequest, err.Error())
+			lib.JSONResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		sendJSONResponse(w, http.StatusInternalServerError, "something went wrong")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
 		return
 	}
 
-	sendJSONResponse(w, http.StatusOK, "added the message to the topic")
+	lib.JSONResponse(w, http.StatusOK, "added the message to the topic")
 }

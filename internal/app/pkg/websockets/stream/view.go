@@ -1,4 +1,4 @@
-package websockets
+package stream
 
 import (
 	"net/http"
@@ -13,24 +13,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// View contains the view websocket that is used to subscribe to a specific kafka topic
-type View struct {
-	E *env.Env
-	C *connections.C
-}
-
-// Method of the view websocket
-func (view *View) Method() string {
-	return http.MethodGet
-}
-
-// Path is the path of the view websocket
-func (view *View) Path() string {
-	return "/view/{topic}"
-}
-
-// Handler is the bussiness logic of the view websocket
-func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
+func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	topic := chi.URLParam(r, "topic")
 	if topic == "" {
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
@@ -62,19 +45,19 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if err = view.C.KafkaWriteToTopicWithHTTP(view.E, topic, payload); err != nil {
+			if err = c.KafkaWriteToTopicWithHTTP(e, topic, payload); err != nil {
 				log.Error().Err(err).Msg("failed to write data to kafka")
 				return
 			}
 		})
 	}
 
-	upgrader.OnOpen(func(c *websocket.Conn) {
-		log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection opened")
+	upgrader.OnOpen(func(conn *websocket.Conn) {
+		log.Info().Str("addr", conn.RemoteAddr().String()).Msg("connection opened")
 		done := make(chan struct{})
 
 		go func() {
-			reader := view.C.KafkaReader(view.E, topic, kafka.LastOffset)
+			reader := c.KafkaReader(e, topic, kafka.LastOffset)
 			defer reader.Close()
 			defer close(done)
 
@@ -87,7 +70,7 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 					if len(message.Value) == 0 {
 						continue
 					}
-					if err := c.WriteMessage(websocket.TextMessage, message.Value); err != nil {
+					if err := conn.WriteMessage(websocket.TextMessage, message.Value); err != nil {
 						log.Error().Err(err).Msg("error sending data to the websocket client")
 						return
 					}
@@ -95,7 +78,7 @@ func (view *View) Handler(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		c.OnClose(func(c *websocket.Conn, err error) {
+		conn.OnClose(func(c *websocket.Conn, err error) {
 			if err != nil {
 				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
 			} else {
