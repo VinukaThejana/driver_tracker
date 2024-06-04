@@ -2,6 +2,8 @@
 package lib
 
 import (
+	"net/http"
+
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/bytedance/sonic"
 )
@@ -29,4 +31,22 @@ func ToStr(jsonStr string) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+type response map[string]interface{}
+
+// JSONResponse is a function that is used to send a a simple JSON response to the client
+func JSONResponse(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	sonic.ConfigDefault.NewEncoder(w).Encode(response{
+		"message": message,
+	})
+}
+
+// JSONResponseWInterface is a function to send a JSON response with the given interface
+func JSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[string]interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	sonic.ConfigDefault.NewEncoder(w).Encode(res)
 }
