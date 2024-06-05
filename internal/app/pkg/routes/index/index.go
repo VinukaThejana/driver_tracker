@@ -8,10 +8,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Index contains all the routes that do not have a collection
-func Index(r chi.Router, e *env.Env) {
+// Router contains all the routes that do not have a collection
+func Router(e *env.Env) http.Handler {
+	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, e.ApiDoc, http.StatusMovedPermanently)
 	})
 	r.Get("/health", health)
+
+	return r
 }

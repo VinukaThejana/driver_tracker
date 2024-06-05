@@ -65,8 +65,8 @@ func router() *chi.Mux {
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
 
-	rt.Routes(r)
-	ws.Websocket(r)
+	r.Mount("/", rt.Routes())
+	r.Mount("/ws", ws.Websocket())
 
 	return r
 }

@@ -2,6 +2,8 @@
 package routes
 
 import (
+	"net/http"
+
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/index"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/stream"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -16,7 +18,11 @@ type Route struct {
 }
 
 // Routes contains all the HTTP routes
-func (route *Route) Routes(r *chi.Mux) {
-	index.Index(r, route.E)
-	stream.Stream(r, route.E, route.C)
+func (route *Route) Routes() http.Handler {
+	r := chi.NewRouter()
+
+	r.Mount("/", index.Router(route.E))
+	r.Mount("/stream", stream.Router(route.E, route.C))
+
+	return r
 }

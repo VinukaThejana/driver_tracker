@@ -2,6 +2,8 @@
 package websockets
 
 import (
+	"net/http"
+
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/websockets/stream"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -15,8 +17,8 @@ type Websocket struct {
 }
 
 // Websocket contains all the websocket connections
-func (w *Websocket) Websocket(r *chi.Mux) {
-	r.Route("/ws", func(r chi.Router) {
-		stream.Stream(r, w.E, w.C)
-	})
+func (w *Websocket) Websocket() http.Handler {
+	r := chi.NewRouter()
+	r.Mount("/stream", stream.WebSocket(w.E, w.C))
+	return r
 }
