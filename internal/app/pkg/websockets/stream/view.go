@@ -84,7 +84,6 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 			} else {
 				log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection closed")
 			}
-			done <- struct{}{}
 		})
 	})
 

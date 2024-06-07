@@ -4,10 +4,10 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -85,7 +85,7 @@ func shutdown(ctx context.Context, engine *nbhttp.Engine) {
 
 func main() {
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", e.Port),
+		Addr:    ":" + strconv.Itoa(e.Port),
 		Handler: router(),
 	}
 
@@ -119,10 +119,12 @@ func main() {
 	case sig := <-signalCh:
 		log.Info().Str("cause", "signal").Str("signal", sig.String()).Msg("shutting down server")
 		shutdown(ctx, engine)
-		cancel()
+		break
 	case <-ctx.Done():
 		log.Info().Msg("context cancelled, shutting down the server")
 		shutdown(ctx, engine)
-		cancel()
+		break
 	}
+
+	cancel()
 }
