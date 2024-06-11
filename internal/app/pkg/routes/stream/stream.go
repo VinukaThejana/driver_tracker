@@ -17,7 +17,7 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 		view(w, r, e, c)
 	})
 	r.Route("/", func(r chi.Router) {
-		r.Use(middlewares.CheckContentTypeIsJSON)
+		r.Use(middlewares.IsContentJSON)
 		r.Post("/create", func(w http.ResponseWriter, r *http.Request) {
 			create(w, r, e, c)
 		})
