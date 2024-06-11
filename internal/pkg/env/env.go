@@ -16,16 +16,16 @@ import (
 
 // Env contains the env schema
 type Env struct {
-	KafkaUsername  string `mapstructure:"KAFKA_USERNAME" validate:"required"`
-	KafkaPassword  string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
-	KafkaBroker    string `mapstructure:"KAFKA_BROKER" validate:"required"`
-	KafkaTopic     string `mapstructure:"KAFKA_TOPIC" validate:"required"`
-	KafkaRestURL   string `mapstructure:"KAFKA_REST_URL" validate:"required,url"`
-	RedisLoggerURL string `mapstructure:"REDIS_LOGGER_URL" validate:"required"`
-	Domain         string `mapstructure:"DOMAIN" validate:"required,url"`
-	Host           string `mapstructure:"HOST" validate:"required"`
-	ApiDoc         string `mapstructure:"API_DOC" validate:"required,url"`
-	Port           int    `mapstructure:"PORT" validate:"required"`
+	KafkaUsername string `mapstructure:"KAFKA_USERNAME" validate:"required"`
+	KafkaPassword string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
+	KafkaBroker   string `mapstructure:"KAFKA_BROKER" validate:"required"`
+	KafkaTopic    string `mapstructure:"KAFKA_TOPIC" validate:"required"`
+	KafkaRestURL  string `mapstructure:"KAFKA_REST_URL" validate:"required,url"`
+	RedisDBURL    string `mapstructure:"REDIS_DB_URL" validate:"required"`
+	Domain        string `mapstructure:"DOMAIN" validate:"required,url"`
+	Host          string `mapstructure:"HOST" validate:"required"`
+	APIDoc        string `mapstructure:"API_DOC" validate:"required,url"`
+	Port          int    `mapstructure:"PORT" validate:"required"`
 }
 
 // Load is a function that is used to Load environment variables

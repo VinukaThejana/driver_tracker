@@ -12,7 +12,7 @@ import (
 func Router(e *env.Env) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, e.ApiDoc, http.StatusMovedPermanently)
+		http.Redirect(w, r, e.APIDoc, http.StatusMovedPermanently)
 	})
 	r.Get("/health", health)
 
