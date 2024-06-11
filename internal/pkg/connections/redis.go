@@ -10,14 +10,13 @@ import (
 
 // Redis contains all Redis connections
 type Redis struct {
-	// Log is used to log various events
-	Log *redis.Client
+	DB *redis.Client
 }
 
 // InitRedis is a function that is used to intialize redis databases
 func (c *C) InitRedis(e *env.Env) {
 	c.R = &Redis{
-		Log: connect(e.RedisLoggerURL),
+		DB: connect(e.RedisDBURL),
 	}
 }
 
