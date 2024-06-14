@@ -26,6 +26,7 @@ type Env struct {
 	Domain              string        `mapstructure:"DOMAIN" validate:"required,url"`
 	Host                string        `mapstructure:"HOST" validate:"required"`
 	APIDoc              string        `mapstructure:"API_DOC" validate:"required,url"`
+	BookingTokenSecret  string        `mapstructure:"BOOKING_TOKEN_SECRET" validate:"required"`
 	BookingTokenExpires time.Duration `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	Port                int           `mapstructure:"PORT" validate:"required"`
 }
