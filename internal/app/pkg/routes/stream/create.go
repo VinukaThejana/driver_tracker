@@ -1,18 +1,29 @@
 package stream
 
 import (
+	"context"
+	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
-	"github.com/segmentio/kafka-go"
+)
+
+const (
+	keyName      = "jobs"
+	lockKey      = "lock:" + keyName
+	lockValue    = "key:locked"
+	lockDuration = 2 * time.Second
+	timeout      = 5 * time.Second
 )
 
 type body struct {
@@ -40,47 +51,98 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
-	dialer, conn, err := c.GetKafkaConnection(e)
+	driverID := r.Context().Value(middlewares.DriverContextKey).(int)
+
+	client := c.R.DB
+	var available []int
+
+	ctx, cancel := context.WithTimeout(r.Context(), timeout)
+	defer cancel()
+
+	serverBusyErr := fmt.Errorf("server is busy right now, no partitions are currently available")
+
+	err := func() error {
+		acquired, err := c.R.AcquireLock(ctx, client, lockKey, lockValue, lockDuration, 100*time.Millisecond)
+		if err != nil {
+			return err
+		}
+		if !acquired {
+			return serverBusyErr
+		}
+		defer c.R.ReleaseLock(client, lockKey)
+
+		payload := client.SMembers(r.Context(), keyName).Val()
+		jobs := make(map[int]struct{})
+		for _, data := range payload {
+			job, err := strconv.Atoi(data)
+			if err != nil {
+				client.SRem(r.Context(), keyName, data)
+				return err
+			}
+			jobs[job] = struct{}{}
+		}
+		partitions := make([]int, 10)
+		for i := range partitions {
+			partitions[i] = i
+		}
+		for _, partition := range partitions {
+			_, found := jobs[partition]
+			if !found {
+				available = append(available, partition)
+			}
+		}
+
+		if len(available) == 0 {
+			return serverBusyErr
+		}
+
+		err = client.SAdd(r.Context(), keyName, available[0]).Err()
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to create kafka connection")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		if errors.Is(err, serverBusyErr) {
+			lib.JSONResponse(w, http.StatusConflict, "server is busy right now, please try again later")
+			return
+		}
+
+		log.Error().Err(err)
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
 		return
 	}
-	defer conn.Close()
 
-	controller, err := conn.Controller()
+	partition := available[0]
+
+	err = client.SetEx(r.Context(), reqBody.BookingID, partition, 24*time.Hour).Err()
 	if err != nil {
-		log.Error().Err(err).Msg("failed to connecto to kafka")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		log.Error().Err(err).Msg("failed to assing the booking to the partition")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
 		return
 	}
 
-	controllerConn, err := dialer.Dial("tcp", net.JoinHostPort(controller.Host, strconv.Itoa(controller.Port)))
+	bt := tokens.BookingToken{
+		C: c,
+		E: e,
+	}
+	token, err := bt.Create(r.Context(), strconv.Itoa(driverID), reqBody.BookingID, partition)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to create the controller connection")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on our end")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
 		return
 	}
-	defer controllerConn.Close()
 
-	err = controllerConn.CreateTopics(kafka.TopicConfig{
-		Topic:             reqBody.BookingID,
-		NumPartitions:     1,
-		ReplicationFactor: 1,
+	http.SetCookie(w, &http.Cookie{
+		Name:     "booking_token",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   int(e.BookingTokenExpires.Seconds()),
+		Expires:  time.Now().UTC().Add(e.BookingTokenExpires).UTC(),
 	})
-	if err != nil {
-		log.Error().Err(err).Msg("failed to create the topic")
-		lib.JSONResponse(w, http.StatusInternalServerError, "failed to create the stream")
-		return
-	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
-		"sub_url": map[string]interface{}{
-			"ws": fmt.Sprintf("ws://%s/ws/view/%s", e.Host, reqBody.BookingID),
-		},
-		"pub_url": map[string]interface{}{
-			"ws":   fmt.Sprintf("ws://%s/ws/add/%s", e.Host, reqBody.BookingID),
-			"http": fmt.Sprintf("%s/add/%s", e.Domain, reqBody.BookingID),
-		},
+		"booking_token": token,
 	})
 }
