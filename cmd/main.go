@@ -37,6 +37,7 @@ var (
 func init() {
 	e.Load()
 	connector.InitRedis(&e)
+	connector.InitKafkaWriters(&e)
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stderr,
@@ -84,6 +85,8 @@ func shutdown(ctx context.Context, engine *nbhttp.Engine) {
 }
 
 func main() {
+	defer connector.Close()
+
 	server := &http.Server{
 		Addr:    ":" + strconv.Itoa(e.Port),
 		Handler: router(),
@@ -125,6 +128,4 @@ func main() {
 		shutdown(ctx, engine)
 		break
 	}
-
-	cancel()
 }

@@ -102,7 +102,7 @@ func (bt *BookingToken) Get(
 	id = claims["sub"].(string)
 	driverID = claims["driver_id"].(string)
 	bookingID = claims["booking_id"].(string)
-	partitionNo = claims["partition_no"].(int)
+	partitionNo = int(claims["partition_no"].(float64))
 
 	return id, driverID, bookingID, partitionNo, nil
 }
