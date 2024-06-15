@@ -3,6 +3,7 @@ package tokens
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -20,7 +21,7 @@ type BookingToken struct {
 // Create is a function that is used to create the booking token
 func (bt *BookingToken) Create(
 	ctx context.Context,
-	driverID string,
+	driverID int,
 	bookingID string,
 	partitionNo int,
 ) (token string, err error) {
@@ -93,14 +94,17 @@ func (bt *BookingToken) Validate(
 // Get is a function that is used to get the details from the booking token
 func (bt *BookingToken) Get(
 	token *jwt.Token,
-) (id, driverID, bookingID string, partitionNo int, err error) {
+) (id string, driverID int, bookingID string, partitionNo int, err error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", "", "", 0, err
+		return "", 0, "", 0, err
 	}
 
 	id = claims["sub"].(string)
-	driverID = claims["driver_id"].(string)
+	driverID, err = strconv.Atoi(claims["driver_id"].(string))
+	if err != nil {
+		return "", 0, "", 0, err
+	}
 	bookingID = claims["booking_id"].(string)
 	partitionNo = int(claims["partition_no"].(float64))
 
