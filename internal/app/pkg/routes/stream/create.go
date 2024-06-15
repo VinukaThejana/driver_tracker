@@ -48,10 +48,15 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
-	driverID := r.Context().Value(middlewares.DriverID).(int)
-
 	client := c.R.DB
+
+	if val := client.Get(r.Context(), reqBody.BookingID).Val(); val != "" {
+		lib.JSONResponse(w, http.StatusConflict, "booking id that you provided is already processing, please use another booking id")
+		return
+	}
+
 	var available []int
+	driverID := r.Context().Value(middlewares.DriverID).(int)
 
 	ctx, cancel := context.WithTimeout(r.Context(), timeout)
 	defer cancel()
