@@ -13,7 +13,6 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
@@ -23,13 +22,6 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 20
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
-
-	topic := chi.URLParam(r, "topic")
-	if topic == "" {
-		log.Error().Msg("topic is not provided")
-		lib.JSONResponse(w, http.StatusBadRequest, "topic is not provided")
-		return
-	}
 
 	var (
 		data    map[string]interface{}
