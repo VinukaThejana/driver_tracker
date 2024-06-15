@@ -3,7 +3,6 @@ package tokens
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -101,10 +100,7 @@ func (bt *BookingToken) Get(
 	}
 
 	id = claims["sub"].(string)
-	driverID, err = strconv.Atoi(claims["driver_id"].(string))
-	if err != nil {
-		return "", 0, "", 0, err
-	}
+	driverID = int(claims["driver_id"].(float64))
 	bookingID = claims["booking_id"].(string)
 	partitionNo = int(claims["partition_no"].(float64))
 
