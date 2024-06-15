@@ -19,9 +19,6 @@ import (
 )
 
 const (
-	keyName      = "jobs"
-	lockKey      = "lock:" + keyName
-	lockValue    = "key:locked"
 	lockDuration = 2 * time.Second
 	timeout      = 5 * time.Second
 )
@@ -51,7 +48,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
-	driverID := r.Context().Value(middlewares.DriverContextKey).(int)
+	driverID := r.Context().Value(middlewares.DriverID).(int)
 
 	client := c.R.DB
 	var available []int
@@ -62,21 +59,21 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	serverBusyErr := fmt.Errorf("server is busy right now, no partitions are currently available")
 
 	err := func() error {
-		acquired, err := c.R.AcquireLock(ctx, client, lockKey, lockValue, lockDuration, 100*time.Millisecond)
+		acquired, err := c.R.AcquireLock(ctx, client, e.PartitionManagerKey, lockDuration, 100*time.Millisecond)
 		if err != nil {
 			return err
 		}
 		if !acquired {
 			return serverBusyErr
 		}
-		defer c.R.ReleaseLock(client, lockKey)
+		defer c.R.ReleaseLock(client, e.PartitionManagerKey)
 
-		payload := client.SMembers(r.Context(), keyName).Val()
+		payload := client.SMembers(r.Context(), e.PartitionManagerKey).Val()
 		jobs := make(map[int]struct{})
 		for _, data := range payload {
 			job, err := strconv.Atoi(data)
 			if err != nil {
-				client.SRem(r.Context(), keyName, data)
+				client.SRem(r.Context(), e.PartitionManagerKey, data)
 				return err
 			}
 			jobs[job] = struct{}{}
@@ -96,7 +93,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 			return serverBusyErr
 		}
 
-		err = client.SAdd(r.Context(), keyName, available[0]).Err()
+		err = client.SAdd(r.Context(), e.PartitionManagerKey, available[0]).Err()
 		if err != nil {
 			return err
 		}
@@ -127,7 +124,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		C: c,
 		E: e,
 	}
-	token, err := bt.Create(r.Context(), strconv.Itoa(driverID), reqBody.BookingID, partition)
+	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition)
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
 		return

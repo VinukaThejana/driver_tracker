@@ -9,15 +9,19 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+func getLockKey(key string) string {
+	return "lock:" + key
+}
+
 // Redis contains all Redis connections
 type Redis struct {
 	DB *redis.Client
 }
 
 // AcquireLock is a function that is used to lock redis keys until an operation is finished modifiying it
-func (r *Redis) AcquireLock(ctx context.Context, client *redis.Client, lockKey, lockValue string, lockDuration, waitDuration time.Duration) (bool, error) {
+func (r *Redis) AcquireLock(ctx context.Context, client *redis.Client, key string, lockDuration, waitDuration time.Duration) (bool, error) {
 	for {
-		acquired, err := client.SetNX(ctx, lockKey, lockValue, lockDuration).Result()
+		acquired, err := client.SetNX(ctx, getLockKey(key), "", lockDuration).Result()
 		if err != nil {
 			return false, err
 		}
@@ -36,8 +40,8 @@ func (r *Redis) AcquireLock(ctx context.Context, client *redis.Client, lockKey, 
 }
 
 // ReleaseLock is a function that is used to release the added lock
-func (r *Redis) ReleaseLock(client *redis.Client, lockKey string) {
-	client.Del(context.Background(), lockKey)
+func (r *Redis) ReleaseLock(client *redis.Client, key string) {
+	client.Del(context.Background(), getLockKey(key))
 }
 
 // InitRedis is a function that is used to intialize redis databases
