@@ -2,6 +2,7 @@ package stream
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -28,6 +29,14 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again")
 		return
 	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "booking_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Expires:  time.Now().Add(-time.Hour * 24),
+	})
 
 	lib.JSONResponse(w, http.StatusOK, "ended the session")
 }
