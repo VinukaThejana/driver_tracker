@@ -2,9 +2,8 @@ package stream
 
 import (
 	"net/http"
-	"time"
+	"strconv"
 
-	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
@@ -14,42 +13,26 @@ import (
 )
 
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
-	topic := chi.URLParam(r, "topic")
-	if topic == "" {
+	bookingID := chi.URLParam(r, "booking_id")
+	if bookingID == "" {
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
 	}
-
-	isDriver := true
+	val := c.R.DB.Get(r.Context(), bookingID).Val()
+	if val == "" {
+		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
+		return
+	}
+	partition, err := strconv.Atoi(val)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to convert the partition to integer")
+		http.Error(w, "something went wrong, please try again later", http.StatusInternalServerError)
+		return
+	}
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
-	}
-
-	if isDriver {
-		upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
-			var (
-				data    map[string]interface{}
-				payload string
-				err     error
-			)
-
-			if err = sonic.UnmarshalString(string(b), &data); err != nil {
-				log.Error().Err(err).Msg("provide valid JSON data")
-				return
-			}
-			data["timestamp"] = time.Now().UTC().Unix()
-			if payload, err = sonic.MarshalString(data); err != nil {
-				log.Error().Err(err).Msg("failed to marshal data")
-				return
-			}
-
-			if err = c.KafkaWriteToTopicWithHTTP(e, topic, payload); err != nil {
-				log.Error().Err(err).Msg("failed to write data to kafka")
-				return
-			}
-		})
 	}
 
 	upgrader.OnOpen(func(conn *websocket.Conn) {
@@ -57,7 +40,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		done := make(chan struct{})
 
 		go func() {
-			reader := c.KafkaReader(e, topic, kafka.LastOffset)
+			reader := c.KafkaReader(e, e.Topic, partition, kafka.LastOffset)
 			defer reader.Close()
 			defer close(done)
 
@@ -87,7 +70,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		})
 	})
 
-	_, err := upgrader.Upgrade(w, r, nil)
+	_, err = upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error().Err(err).Msg("error occured while upgrading the websocket connection")
 		return
