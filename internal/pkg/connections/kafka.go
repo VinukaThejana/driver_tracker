@@ -111,7 +111,7 @@ func (c *C) KafkaReader(e *env.Env, topic string, partition int, offset int64) *
 		},
 		Partition: partition,
 	})
-	reader.SetOffset(kafka.LastOffset)
+	reader.SetOffset(offset)
 
 	return reader
 }
