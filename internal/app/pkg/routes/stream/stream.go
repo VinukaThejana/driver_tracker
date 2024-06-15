@@ -26,11 +26,11 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsBookingTokenValid(h, c, e)
+			return middlewares.IsBookingTokenValid(h, e, c)
 		})
 		r.Route("/add", func(r chi.Router) {
 			r.Use(middlewares.IsContentJSON)
-			r.Post("/{topic}", func(w http.ResponseWriter, r *http.Request) {
+			r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 				add(w, r, e, c)
 			})
 		})

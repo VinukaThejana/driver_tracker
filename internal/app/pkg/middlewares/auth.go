@@ -48,7 +48,7 @@ func IsDriver(next http.Handler) http.Handler {
 }
 
 // IsBookingTokenValid is a middleware that is used to check wether the booking token is valid or not
-func IsBookingTokenValid(next http.Handler, c *connections.C, e *env.Env) http.Handler {
+func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookingToken := ""
 		unauthorizedErr := fmt.Errorf("you are not authorized to perform this operation")
