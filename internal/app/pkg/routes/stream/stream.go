@@ -13,7 +13,7 @@ import (
 // Router a route group that contains all the routes that are related to stream
 func Router(e *env.Env, c *connections.C) http.Handler {
 	r := chi.NewRouter()
-	r.Get("/view", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/view/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
 		view(w, r, e, c)
 	})
 	r.Route("/create", func(r chi.Router) {

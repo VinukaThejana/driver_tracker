@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
@@ -20,11 +21,20 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "Keep-alive")
 
-	offset := kafka.LastOffset
-
-	topic := chi.URLParam(r, "topic")
-	if topic == "" {
-		http.Error(w, "subscribe to a valid booking id", http.StatusBadRequest)
+	bookingID := chi.URLParam(r, "booking_id")
+	if bookingID == "" {
+		http.Error(w, "please provide a valid booking id", http.StatusBadRequest)
+		return
+	}
+	val := c.R.DB.Get(r.Context(), bookingID).Val()
+	if val == "" {
+		http.Error(w, "please provide a valid booking id", http.StatusBadRequest)
+		return
+	}
+	partitionNo, err := strconv.Atoi(val)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to convert the partition number from string to int")
+		http.Error(w, "something went wrong, please try again later", http.StatusInternalServerError)
 		return
 	}
 
@@ -34,7 +44,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		return
 	}
 
-	reader := c.KafkaReader(e, topic, offset)
+	reader := c.KafkaReader(e, e.Topic, partitionNo, kafka.LastOffset)
 	defer reader.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3600)
