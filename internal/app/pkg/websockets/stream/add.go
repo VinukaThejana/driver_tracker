@@ -1,23 +1,23 @@
 package stream
 
 import (
+	"context"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/rs/zerolog/log"
+	"github.com/segmentio/kafka-go"
 )
 
-func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
-	topic := chi.URLParam(r, "topic")
-	if topic == "" {
-		log.Error().Msg("topic is not provided")
-		return
-	}
+func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
+	driverID := r.Context().Value(middlewares.DriverID).(int)
+	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
@@ -41,10 +41,16 @@ func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 			return
 		}
 
-		if err = c.KafkaWriteToTopicWithHTTP(e, topic, payload); err != nil {
-			log.Error().Err(err).Msg("failed to write data to kafka")
-			return
-		}
+		go func() {
+			writer := c.K.B
+			writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
+				return partitionNo
+			})
+			writer.WriteMessages(context.Background(), kafka.Message{
+				Key:   []byte(strconv.Itoa(int(driverID))),
+				Value: []byte(payload),
+			})
+		}()
 	})
 	upgrader.OnOpen(func(c *websocket.Conn) {
 		log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection opened")
