@@ -29,8 +29,13 @@ type Env struct {
 	BookingTokenSecret  string        `mapstructure:"BOOKING_TOKEN_SECRET" validate:"required"`
 	PartitionManagerKey string        `mapstructure:"PARTITION_MANAGER_KEY" validate:"required"`
 	Topic               string        `mapstructure:"TOPIC" validate:"required"`
+	DBUser              string        `mapstructure:"DB_USER" validate:"required"`
+	DBPassword          string        `mapstructure:"DB_PASSWORD" validate:"required"`
+	DBHost              string        `mapstructure:"DB_HOST" validate:"required"`
+	DBDatabase          string        `mapstructure:"DB_DATABASE" validate:"required"`
 	BookingTokenExpires time.Duration `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	Port                int           `mapstructure:"PORT" validate:"required"`
+	DBPort              int           `mapstructure:"DB_PORT" validate:"required"`
 }
 
 // Load is a function that is used to Load environment variables
