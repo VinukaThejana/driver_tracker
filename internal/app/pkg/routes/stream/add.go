@@ -1,21 +1,25 @@
 package stream
 
 import (
+	"context"
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+	"github.com/segmentio/kafka-go"
 )
 
 // add is a route that is used to add data to the stream
-func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
+func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 20
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
@@ -45,6 +49,9 @@ func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusBadRequest, "failed to parse data invalid json")
 		return
 	}
+
+	driverID := r.Context().Value(middlewares.DriverID).(int)
+	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 	data["timestamp"] = time.Now().UTC().Unix()
 
 	payload, err = sonic.MarshalString(data)
@@ -54,16 +61,17 @@ func add(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		return
 	}
 
-	err = c.KafkaWriteToTopicWithHTTP(e, topic, payload)
-	if err != nil {
-		log.Error().Err(err).Msg("error sending the message to the topic")
-		if errors.Is(err, connections.ErrKafkaNoTopic) {
-			lib.JSONResponse(w, http.StatusBadRequest, err.Error())
-			return
-		}
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
-		return
-	}
+	// TODO: Benchmark the performance with the HTTP writer
+	go func() {
+		writer := c.K.B
+		writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
+			return partitionNo
+		})
+		writer.WriteMessages(context.Background(), kafka.Message{
+			Key:   []byte(strconv.Itoa(int(driverID))),
+			Value: []byte(payload),
+		})
+	}()
 
 	lib.JSONResponse(w, http.StatusOK, "added the message to the topic")
 }
