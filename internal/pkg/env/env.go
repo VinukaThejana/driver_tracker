@@ -28,6 +28,7 @@ type Env struct {
 	APIDoc              string        `mapstructure:"API_DOC" validate:"required,url"`
 	BookingTokenSecret  string        `mapstructure:"BOOKING_TOKEN_SECRET" validate:"required"`
 	PartitionManagerKey string        `mapstructure:"PARTITION_MANAGER_KEY" validate:"required"`
+	Topic               string        `mapstructure:"TOPIC" validate:"required"`
 	BookingTokenExpires time.Duration `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	Port                int           `mapstructure:"PORT" validate:"required"`
 }
