@@ -34,19 +34,42 @@ const (
 )
 
 // IsDriver is a middleware that is used to check wether the driver is logged in
-func IsDriver(next http.Handler) http.Handler {
+func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// FIX: Add the logic to extract the drivers JWT token and validate it to check wether the logging in user
-		// is infact a driver
-		isDriver := true
-		if !isDriver {
-			http.Error(w, "you are unauthorized to perform this action", http.StatusUnauthorized)
+		driverToken := ""
+		unauthorizedErr := fmt.Errorf("you are not authorized to perform this operation")
+
+		authorization := strings.Split(r.Header.Get("Authorization"), " ")
+		if len(authorization) == 2 {
+			driverToken = authorization[1]
+		} else {
+			driverTokenC, err := r.Cookie("EncryptKey")
+			if err != nil {
+				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			driverToken = driverTokenC.Value
+		}
+
+		if driverToken == "" {
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
 
-		driverID := 2
+		dt := tokens.DriverToken{
+			E: e,
+			C: c,
+		}
 
-		ctx := context.WithValue(r.Context(), DriverID, driverID)
+		isValid, _ := dt.Validate(driverToken)
+		if !isValid {
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		// FIX: Get the proper driver ID
+		ctx := context.WithValue(r.Context(), DriverID, 2)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
