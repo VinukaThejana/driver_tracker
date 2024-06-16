@@ -31,9 +31,14 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
+	duration, err := time.ParseDuration(fmt.Sprintf("%ds", bt.E.BookingTokenExpires))
+	if err != nil {
+		return "", err
+	}
+
 	claims := make(jwt.MapClaims)
 	claims["sub"] = id.String()
-	claims["exp"] = now.Add(bt.E.BookingTokenExpires).Unix()
+	claims["exp"] = now.Add(duration).Unix()
 	claims["iat"] = now.Unix()
 	claims["nbf"] = now.Unix()
 	claims["driver_id"] = driverID
@@ -46,7 +51,7 @@ func (bt *BookingToken) Create(
 	}
 
 	client := bt.C.R.DB
-	err = client.SetNX(ctx, id.String(), true, bt.E.BookingTokenExpires).Err()
+	err = client.SetNX(ctx, id.String(), true, duration).Err()
 	if err != nil {
 		return "", err
 	}

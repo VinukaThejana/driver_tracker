@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
@@ -17,26 +16,26 @@ import (
 
 // Env contains the env schema
 type Env struct {
-	KafkaUsername       string        `mapstructure:"KAFKA_USERNAME" validate:"required"`
-	KafkaPassword       string        `mapstructure:"KAFKA_PASSWORD" validate:"required"`
-	KafkaBroker         string        `mapstructure:"KAFKA_BROKER" validate:"required"`
-	KafkaRestURL        string        `mapstructure:"KAFKA_REST_URL" validate:"required,url"`
-	RedisDBURL          string        `mapstructure:"REDIS_DB_URL" validate:"required"`
-	Domain              string        `mapstructure:"DOMAIN" validate:"required,url"`
-	Host                string        `mapstructure:"HOST" validate:"required"`
-	APIDoc              string        `mapstructure:"API_DOC" validate:"required,url"`
-	BookingTokenSecret  string        `mapstructure:"BOOKING_TOKEN_SECRET" validate:"required"`
-	PartitionManagerKey string        `mapstructure:"PARTITION_MANAGER_KEY" validate:"required"`
-	Topic               string        `mapstructure:"TOPIC" validate:"required"`
-	DBUser              string        `mapstructure:"DB_USER" validate:"required"`
-	DBPassword1         string        `mapstructure:"DB_PASSWORD_1" validate:"required"`
-	DBPassword2         string        `mapstructure:"DB_PASSWORD_2" validate:"required"`
-	DBHost              string        `mapstructure:"DB_HOST" validate:"required"`
-	DBDatabase          string        `mapstructure:"DB_DATABASE" validate:"required"`
-	BookingTokenExpires time.Duration `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
-	DBPassword3         int           `mapstructure:"DB_PASSWORD_3" validate:"required"`
-	Port                int           `mapstructure:"PORT" validate:"required"`
-	DBPort              int           `mapstructure:"DB_PORT" validate:"required"`
+	KafkaUsername       string `mapstructure:"KAFKA_USERNAME" validate:"required"`
+	KafkaPassword       string `mapstructure:"KAFKA_PASSWORD" validate:"required"`
+	KafkaBroker         string `mapstructure:"KAFKA_BROKER" validate:"required"`
+	KafkaRestURL        string `mapstructure:"KAFKA_REST_URL" validate:"required,url"`
+	RedisDBURL          string `mapstructure:"REDIS_DB_URL" validate:"required"`
+	Domain              string `mapstructure:"DOMAIN" validate:"required,url"`
+	Host                string `mapstructure:"HOST" validate:"required"`
+	APIDoc              string `mapstructure:"API_DOC" validate:"required,url"`
+	BookingTokenSecret  string `mapstructure:"BOOKING_TOKEN_SECRET" validate:"required"`
+	PartitionManagerKey string `mapstructure:"PARTITION_MANAGER_KEY" validate:"required"`
+	Topic               string `mapstructure:"TOPIC" validate:"required"`
+	DBUser              string `mapstructure:"DB_USER" validate:"required"`
+	DBPassword1         string `mapstructure:"DB_PASSWORD_1" validate:"required"`
+	DBPassword2         string `mapstructure:"DB_PASSWORD_2" validate:"required"`
+	DBHost              string `mapstructure:"DB_HOST" validate:"required"`
+	DBDatabase          string `mapstructure:"DB_DATABASE" validate:"required"`
+	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
+	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
+	Port                int    `mapstructure:"PORT" validate:"required"`
+	DBPort              int    `mapstructure:"DB_PORT" validate:"required"`
 }
 
 // Load is a function that is used to Load environment variables

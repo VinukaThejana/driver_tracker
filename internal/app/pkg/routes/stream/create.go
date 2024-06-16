@@ -135,13 +135,20 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
+	duration, err := time.ParseDuration(fmt.Sprintf("%ds", e.BookingTokenExpires))
+	if err != nil {
+		log.Error().Err(err).Msg("failed to convert the booking token expires to seconds")
+		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
+		return
+	}
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "booking_token",
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   int(e.BookingTokenExpires.Seconds()),
-		Expires:  time.Now().UTC().Add(e.BookingTokenExpires).UTC(),
+		MaxAge:   e.BookingTokenExpires,
+		Expires:  time.Now().UTC().Add(duration).UTC(),
 	})
 
 	lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
