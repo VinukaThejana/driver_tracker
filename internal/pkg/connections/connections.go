@@ -1,12 +1,16 @@
 // Package connections contains connections to various third party services
 package connections
 
+import "database/sql"
+
 // C contains all third pary connections
 type C struct {
 	// R contains all Redis related databases
 	R *Redis
 	// K contains all Kafka writers
 	K *KafkaWriters
+	// DB contains the Database connection
+	DB *sql.DB
 }
 
 // Close is a function that is used to close all the connections
@@ -16,4 +20,7 @@ func (c *C) Close() {
 
 	// close all the redis clients
 	c.R.DB.Close()
+
+	// close the connection to the database
+	c.DB.Close()
 }

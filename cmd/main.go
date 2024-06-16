@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/denisenkom/go-mssqldb/azuread"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes"
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/websockets"
@@ -38,6 +39,7 @@ func init() {
 	e.Load()
 	connector.InitRedis(&e)
 	connector.InitKafkaWriters(&e)
+	connector.InitDB(&e)
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stderr,
