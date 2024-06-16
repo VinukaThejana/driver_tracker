@@ -11,7 +11,7 @@ import (
 // Router contains all the routes that do not have a collection
 func Router(e *env.Env) http.Handler {
 	r := chi.NewRouter()
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/api/doc", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, e.APIDoc, http.StatusMovedPermanently)
 	})
 	r.Get("/health", health)
