@@ -23,10 +23,14 @@ type (
 )
 
 const (
+	// BookingTokenID is a key to notate the booking token id
 	BookingTokenID BookingTokenIDCtx = "booking_token_id"
-	DriverID       DriverIDCtx       = "driver_id"
-	BookingID      BookingIDCtx      = "booking_id"
-	PartitionNo    PartitionNoCtx    = "partition_no"
+	// DriverID is a key to notate the driver id
+	DriverID DriverIDCtx = "driver_id"
+	// BookingID is a key to notate the booking id
+	BookingID BookingIDCtx = "booking_id"
+	// PartitionNo is a key to notate the partition number
+	PartitionNo PartitionNoCtx = "partition_no"
 )
 
 // IsDriver is a middleware that is used to check wether the driver is logged in
