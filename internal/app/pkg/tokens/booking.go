@@ -101,7 +101,7 @@ func (bt *BookingToken) Get(
 ) (id string, driverID int, bookingID string, partitionNo int, err error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", 0, "", 0, err
+		return "", 0, "", 0, fmt.Errorf("failed to map the token to claims")
 	}
 
 	id = claims["sub"].(string)
