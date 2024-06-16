@@ -21,10 +21,9 @@ func (dt *DriverToken) Validate(str string) (isValid bool, token *jwt.Token) {
 			return nil, fmt.Errorf("invalid signing algorithm was used")
 		}
 
-		return []byte("beaaefe2a757eb5a8a4599fb663f152aa2aaccfaad80ebb2590fab3238fff30e@345"), nil
+		return []byte(dt.E.DriverTokenSecret), nil
 	})
 	if err != nil || token == nil {
-		panic(err)
 		return false, nil
 	}
 
@@ -33,7 +32,23 @@ func (dt *DriverToken) Validate(str string) (isValid bool, token *jwt.Token) {
 		return false, nil
 	}
 
-	fmt.Printf("claims: %v\n", claims)
+	role := claims["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].(string)
+	if role != "D" {
+		return false, nil
+	}
 
-	return true, nil
+	return true, token
+}
+
+// Get is a function that is used to get the claims of the given JWT token
+func (dt *DriverToken) Get(token *jwt.Token) (name, role string, err error) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		return "", "", fmt.Errorf("failed to map the claims of the jwt")
+	}
+
+	name = claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"].(string)
+	role = claims["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].(string)
+
+	return name, role, nil
 }
