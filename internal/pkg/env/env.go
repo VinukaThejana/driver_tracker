@@ -32,6 +32,7 @@ type Env struct {
 	DBPassword2         string `mapstructure:"DB_PASSWORD_2" validate:"required"`
 	DBHost              string `mapstructure:"DB_HOST" validate:"required"`
 	DBDatabase          string `mapstructure:"DB_DATABASE" validate:"required"`
+	DriverTokenSecret   string `mapstructure:"DRIVER_TOKEN_SECRET" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
 	Port                int    `mapstructure:"PORT" validate:"required"`

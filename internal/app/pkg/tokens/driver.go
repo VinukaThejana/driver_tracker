@@ -21,16 +21,19 @@ func (dt *DriverToken) Validate(str string) (isValid bool, token *jwt.Token) {
 			return nil, fmt.Errorf("invalid signing algorithm was used")
 		}
 
-		return []byte(""), nil
+		return []byte("beaaefe2a757eb5a8a4599fb663f152aa2aaccfaad80ebb2590fab3238fff30e@345"), nil
 	})
 	if err != nil || token == nil {
+		panic(err)
 		return false, nil
 	}
 
-	_, ok := token.Claims.(jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		return false, nil
 	}
+
+	fmt.Printf("claims: %v\n", claims)
 
 	return true, nil
 }
