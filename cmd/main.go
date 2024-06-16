@@ -19,6 +19,7 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/go-chi/httprate"
 	"github.com/lesismal/nbio/nbhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -67,6 +68,7 @@ func router() *chi.Mux {
 		AllowedMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
 		AllowedHeaders: []string{"Content-Type", "X-CSRF-Token"},
 	}))
+	r.Use(httprate.LimitByIP(100, 1*time.Minute))
 
 	r.Mount("/", rt.Routes())
 	r.Mount("/ws", ws.Websocket())
