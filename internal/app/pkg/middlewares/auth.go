@@ -124,3 +124,16 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+// IsAdmin is a middleware that is used to make sure that the requesting user is the admin
+func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		secret := r.URL.Query().Get("secret")
+		if secret != e.AdminSecret {
+			http.Error(w, "you not an admin to perform this operation", http.StatusInternalServerError)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
