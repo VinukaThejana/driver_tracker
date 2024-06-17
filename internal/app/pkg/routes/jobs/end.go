@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -31,10 +32,16 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
 		return
 	}
+	driverTokenID := client.Get(r.Context(), fmt.Sprint(partitionNo)).Val()
+	if driverTokenID == "" {
+		lib.JSONResponse(w, http.StatusUnauthorized, "you are not authorized to perform this operation")
+		return
+	}
 
 	pipe := client.Pipeline()
 
 	pipe.Del(r.Context(), bookingID)
+	pipe.Del(r.Context(), driverTokenID)
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
 
 	_, err = pipe.Exec(r.Context())

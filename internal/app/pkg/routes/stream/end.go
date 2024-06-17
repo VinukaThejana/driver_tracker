@@ -1,6 +1,7 @@
 package stream
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -21,6 +22,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	pipe.Del(r.Context(), id)
 	pipe.Del(r.Context(), bookingID)
+	pipe.Del(r.Context(), fmt.Sprint(partitionNo))
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
 
 	_, err := pipe.Exec(r.Context())

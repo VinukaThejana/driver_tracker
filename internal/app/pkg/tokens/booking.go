@@ -50,8 +50,10 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
-	client := bt.C.R.DB
-	err = client.SetNX(ctx, id.String(), true, duration).Err()
+	pipe := bt.C.R.DB.Pipeline()
+	pipe.SetNX(ctx, id.String(), true, duration)
+	pipe.SetNX(ctx, fmt.Sprint(partitionNo), id.String(), duration)
+	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return "", err
 	}
