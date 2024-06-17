@@ -9,13 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func reset(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
-	secret := r.URL.Query().Get("secret")
-	if secret != e.AdminSecret {
-		lib.JSONResponse(w, http.StatusUnauthorized, "you are not authorized to perform this operation")
-		return
-	}
-
+func reset(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	err := c.R.DB.FlushDB(r.Context()).Err()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to flush the database")
