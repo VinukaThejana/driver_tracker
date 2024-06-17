@@ -18,7 +18,9 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 	})
 	r.Route("/create", func(r chi.Router) {
 		r.Use(middlewares.IsContentJSON)
-		r.Use(middlewares.IsDriver)
+		r.Use(func(h http.Handler) http.Handler {
+			return middlewares.IsDriver(h, e, c)
+		})
 		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			create(w, r, e, c)
 		})
