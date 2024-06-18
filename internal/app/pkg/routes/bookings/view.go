@@ -95,9 +95,6 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		dropoffs = append(dropoffs, payload...)
 	}
 
-	fmt.Printf("pickups: %v\n", pickups)
-	fmt.Printf("dropoffs: %v\n", dropoffs)
-
 	data := map[string]any{}
 	data["active"] = started
 	data["driver_name"] = DriverName
