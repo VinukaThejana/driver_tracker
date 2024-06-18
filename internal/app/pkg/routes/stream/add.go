@@ -53,7 +53,6 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		return
 	}
 
-	// TODO: Benchmark the performance with the HTTP writer
 	go func() {
 		writer := c.K.B
 		writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
