@@ -41,6 +41,7 @@ func init() {
 	connector.InitRedis(&e)
 	connector.InitKafkaWriters(&e)
 	connector.InitDB(&e)
+	connector.InitMap(&e)
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stderr,

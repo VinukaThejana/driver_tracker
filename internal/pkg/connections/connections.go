@@ -1,7 +1,11 @@
 // Package connections contains connections to various third party services
 package connections
 
-import "database/sql"
+import (
+	"database/sql"
+
+	"googlemaps.github.io/maps"
+)
 
 // C contains all third pary connections
 type C struct {
@@ -11,6 +15,8 @@ type C struct {
 	K *KafkaWriters
 	// DB contains the Database connection
 	DB *sql.DB
+	// M contains the connection to Google maps
+	M *maps.Client
 }
 
 // Close is a function that is used to close all the connections
