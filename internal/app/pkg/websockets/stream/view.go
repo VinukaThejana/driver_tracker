@@ -6,6 +6,7 @@ import (
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/rs/zerolog/log"
@@ -26,7 +27,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	partition, err := strconv.Atoi(val)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to convert the partition to integer")
-		http.Error(w, "something went wrong, please try again later", http.StatusInternalServerError)
+		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 

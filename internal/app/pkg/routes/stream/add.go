@@ -2,7 +2,7 @@ package stream
 
 import (
 	"context"
-	"errors"
+	ers "errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -12,6 +12,7 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
@@ -31,7 +32,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		if errors.Is(err, io.EOF) {
+		if ers.Is(err, io.EOF) {
 			log.Error().Msg("request body is empty")
 			lib.JSONResponse(w, http.StatusBadRequest, "body cannot be empty, please provide valid json")
 			return
@@ -49,7 +50,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	payload, err = sonic.MarshalString(data)
 	if err != nil {
 		log.Error().Err(err).Msg("error marshaling the request body")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong on the server side")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
 

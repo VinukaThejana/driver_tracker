@@ -2,13 +2,13 @@ package middlewares
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
 )
 
 type (
@@ -37,7 +37,7 @@ const (
 func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		driverToken := ""
-		unauthorizedErr := fmt.Errorf("you are not authorized to perform this operation")
+		unauthorizedErr := errors.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -78,7 +78,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookingToken := ""
-		unauthorizedErr := fmt.Errorf("you are not authorized to perform this operation")
+		unauthorizedErr := errors.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -130,7 +130,7 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		secret := r.URL.Query().Get("secret")
 		if secret != e.AdminSecret {
-			http.Error(w, "you not an admin to perform this operation", http.StatusInternalServerError)
+			http.Error(w, errors.ErrNotAdmin.Error(), http.StatusInternalServerError)
 			return
 		}
 

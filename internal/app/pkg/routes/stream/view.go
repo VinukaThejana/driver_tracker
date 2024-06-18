@@ -9,6 +9,7 @@ import (
 
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -34,7 +35,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	partitionNo, err := strconv.Atoi(val)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to convert the partition number from string to int")
-		http.Error(w, "something went wrong, please try again later", http.StatusInternalServerError)
+		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -55,7 +56,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		payload, err := lib.ToStr(string(message.Value))
 		if err != nil {
 			log.Error().Err(err).Str("value", string(message.Value)).Msg("Error occured when serialization and deserialization")
-			http.Error(w, "something went wrong", http.StatusInternalServerError)
+			http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 			return
 		}
 		payloadStr := string(payload)

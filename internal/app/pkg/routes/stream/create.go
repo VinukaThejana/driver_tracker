@@ -2,7 +2,7 @@ package stream
 
 import (
 	"context"
-	"errors"
+	ers "errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,6 +13,7 @@ import (
 	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
 	"github.com/go-playground/validator/v10"
 	"github.com/rs/zerolog/log"
@@ -106,13 +107,13 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return nil
 	}()
 	if err != nil {
-		if errors.Is(err, serverBusyErr) {
-			lib.JSONResponse(w, http.StatusConflict, "server is busy right now, please try again later")
+		if ers.Is(err, serverBusyErr) {
+			lib.JSONResponse(w, http.StatusConflict, errors.ErrBusy.Error())
 			return
 		}
 
 		log.Error().Err(err)
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
 
@@ -121,7 +122,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	err = client.SetEx(r.Context(), reqBody.BookingID, partition, 24*time.Hour).Err()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to assing the booking to the partition")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
 
@@ -131,14 +132,14 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition)
 	if err != nil {
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
 
 	duration, err := time.ParseDuration(fmt.Sprintf("%ds", e.BookingTokenExpires))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to convert the booking token expires to seconds")
-		lib.JSONResponse(w, http.StatusInternalServerError, "something went wrong, please try again later")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
 
