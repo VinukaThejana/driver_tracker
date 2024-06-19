@@ -84,7 +84,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 			}
 			jobs[job] = struct{}{}
 		}
-		partitions := make([]int, 10)
+		partitions := make([]int, e.TotalPartitions)
 		for i := range partitions {
 			partitions[i] = i
 		}
