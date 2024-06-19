@@ -54,16 +54,15 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		return
 	}
 
-	go func() {
-		writer := c.K.B
-		writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
-			return partitionNo
-		})
-		writer.WriteMessages(context.Background(), kafka.Message{
-			Key:   []byte(strconv.Itoa(int(driverID))),
-			Value: []byte(payload),
-		})
-	}()
+	writer := c.K.B
+	writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
+		return partitionNo
+	})
+	writer.Async = true
+	writer.WriteMessages(context.Background(), kafka.Message{
+		Key:   []byte(strconv.Itoa(int(driverID))),
+		Value: []byte(payload),
+	})
 
 	lib.JSONResponse(w, http.StatusOK, "added the message to the topic")
 }
