@@ -23,7 +23,7 @@ type Route struct {
 func (route *Route) Routes() http.Handler {
 	r := chi.NewRouter()
 
-	r.Mount("/", index.Router(route.E))
+	r.Mount("/", index.Router(route.E, route.C))
 	r.Mount("/stream", stream.Router(route.E, route.C))
 	r.Mount("/bookings", bookings.Router(route.E, route.C))
 	r.Mount("/jobs", jobs.Router(route.E, route.C))
