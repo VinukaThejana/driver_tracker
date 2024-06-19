@@ -43,6 +43,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	pipe.Del(r.Context(), bookingID)
 	pipe.Del(r.Context(), driverTokenID)
+	pipe.Del(r.Context(), fmt.Sprint(partitionNo))
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
 
 	_, err = pipe.Exec(r.Context())

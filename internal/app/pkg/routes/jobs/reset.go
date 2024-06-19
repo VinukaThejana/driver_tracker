@@ -1,4 +1,4 @@
-package stream
+package jobs
 
 import (
 	"net/http"

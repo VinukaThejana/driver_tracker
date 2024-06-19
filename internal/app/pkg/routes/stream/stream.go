@@ -44,13 +44,5 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 		})
 	})
 
-	r.Route("/reset", func(r chi.Router) {
-		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsAdmin(h, e, c)
-		})
-		r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
-			reset(w, r, e, c)
-		})
-	})
 	return r
 }

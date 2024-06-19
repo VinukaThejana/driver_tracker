@@ -14,12 +14,15 @@ import (
 func Router(e *env.Env, c *connections.C) http.Handler {
 	r := chi.NewRouter()
 
-	r.Route("/end", func(r chi.Router) {
+	r.Route("/", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
 			return middlewares.IsAdmin(h, e, c)
 		})
-		r.Get("/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
+		r.Delete("/end/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
 			end(w, r, e, c)
+		})
+		r.Delete("/reset", func(w http.ResponseWriter, r *http.Request) {
+			reset(w, r, e, c)
 		})
 	})
 
