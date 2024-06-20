@@ -45,7 +45,7 @@ type Env struct {
 // Load is a function that is used to Load environment variables
 func (e *Env) Load(path ...string) {
 	configPath := "."
-	configFile := ".env"
+	configFile := "secrets/.env"
 
 	v := viper.New()
 
