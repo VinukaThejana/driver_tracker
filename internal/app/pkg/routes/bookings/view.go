@@ -55,6 +55,8 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		return
 	}
 
+	c.InitMap(e)
+
 	DriverName := ""
 	ContactNo := ""
 	VehicleModal := ""

@@ -38,10 +38,11 @@ var (
 
 func init() {
 	e.Load()
+
+	// NOTE: Initialize the most essential services only
 	connector.InitRedis(&e)
 	connector.InitKafkaWriters(&e)
 	connector.InitDB(&e)
-	connector.InitMap(&e)
 
 	log.Logger = log.Output(zerolog.ConsoleWriter{
 		Out: os.Stderr,
