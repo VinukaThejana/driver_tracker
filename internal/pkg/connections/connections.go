@@ -4,6 +4,7 @@ package connections
 import (
 	"database/sql"
 
+	"cloud.google.com/go/storage"
 	"googlemaps.github.io/maps"
 )
 
@@ -17,6 +18,8 @@ type C struct {
 	DB *sql.DB
 	// M contains the connection to Google maps
 	M *maps.Client
+	// S contains the cloud run storage connection
+	S *storage.Client
 }
 
 // Close is a function that is used to close all the connections
