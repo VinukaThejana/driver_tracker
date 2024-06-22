@@ -15,3 +15,6 @@ prd_env:
 
 stg_env:
   bash ./scripts/secrets.sh $DOPPLER_STG_SERVICE_ACCOUNT $SERVICE_STG_NAME $SERVICE_STG_REGION
+
+kafka_ui:
+  docker run -p 9090:8080 -v ./.kafka.yml:/application.yml provectuslabs/kafka-ui:latest
