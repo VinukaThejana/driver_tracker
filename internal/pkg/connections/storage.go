@@ -2,6 +2,7 @@ package connections
 
 import (
 	"context"
+	"encoding/base64"
 
 	"cloud.google.com/go/storage"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -11,7 +12,12 @@ import (
 
 // InitStorage is a function that is used to initialize the Google cloud storage
 func (c *C) InitStorage(e *env.Env) {
-	client, err := storage.NewClient(context.Background(), option.WithAPIKey(e.GcloudAPIKey))
+	key, err := base64.StdEncoding.DecodeString(e.GcloudAPIKey)
+	if err != nil {
+		lib.LogFatal(err)
+	}
+
+	client, err := storage.NewClient(context.Background(), option.WithCredentialsJSON(key))
 	if err != nil {
 		lib.LogFatal(err)
 	}
