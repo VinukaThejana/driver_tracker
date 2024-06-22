@@ -11,4 +11,7 @@ env:
   doppler secrets download --no-file --format=env > .env
 
 prd_env:
-  bash ./scripts/prd_secrets.sh $DOPPLER_PRD_SERVICE_ACCOUNT $SERVICE_NAME $SERVICE_REGION
+  bash ./scripts/secrets.sh $DOPPLER_PRD_SERVICE_ACCOUNT $SERVICE_NAME $SERVICE_REGION
+
+stg_env:
+  bash ./scripts/secrets.sh $DOPPLER_STG_SERVICE_ACCOUNT $SERVICE_STG_NAME $SERVICE_STG_REGION
