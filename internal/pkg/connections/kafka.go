@@ -39,6 +39,13 @@ func writer(e *env.Env, topic string) *kafka.Writer {
 	return &w
 }
 
+func getDialer(e *env.Env) *kafka.Dialer {
+	return &kafka.Dialer{
+		SASLMechanism: getMechanism(e),
+		TLS:           &tls.Config{},
+	}
+}
+
 // InitKafkaWriters is a function that is used to initialize kafka writers
 func (c *C) InitKafkaWriters(e *env.Env) {
 	c.K = &KafkaWriters{
@@ -47,17 +54,30 @@ func (c *C) InitKafkaWriters(e *env.Env) {
 }
 
 // GetKafkaConnection is a function that is used to initialize the kafka connection
-func (c *C) GetKafkaConnection(e *env.Env) (*kafka.Dialer, *kafka.Conn, error) {
-	dialer := &kafka.Dialer{
-		SASLMechanism: getMechanism(e),
-		TLS:           &tls.Config{},
-	}
-
-	conn, err := dialer.Dial("tcp", e.KafkaBroker)
+func (c *C) GetKafkaConnection(e *env.Env) (*kafka.Conn, error) {
+	conn, err := getDialer(e).Dial("tcp", e.KafkaBroker)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return dialer, conn, nil
+	return conn, err
+}
+
+// GetKafkaLeaderConnection is a function that is used to get the kafka leader connection
+func (c *C) GetKafkaLeaderConnection(ctx context.Context, e *env.Env, topic string, partition int) (*kafka.Conn, error) {
+	conn, err := getDialer(e).DialLeader(ctx, "tcp", e.KafkaBroker, topic, partition)
+	return conn, err
+}
+
+// GetLastOffset is a function that is used to get the last offset of a given partition in a given topic
+func (c *C) GetLastOffset(ctx context.Context, e *env.Env, topic string, partition int) (offset int64, err error) {
+	conn, err := c.GetKafkaLeaderConnection(ctx, e, topic, partition)
+	if err != nil {
+		return -1, err
+	}
+	defer conn.Close()
+
+	offset, err = conn.ReadLastOffset()
+	return offset, err
 }
 
 // KafkaWriteToTopic is a function that is used to write to a given Kafka topic
