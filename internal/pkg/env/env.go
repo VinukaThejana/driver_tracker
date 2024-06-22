@@ -35,6 +35,7 @@ type Env struct {
 	DriverTokenSecret   string `mapstructure:"DRIVER_TOKEN_SECRET" validate:"required"`
 	AdminSecret         string `mapstructure:"ADMIN_SECRET" validate:"required"`
 	GoogleMapsAPIKey    string `mapstructure:"GOOGLE_MAPS_API_KEY" validate:"required"`
+	GcloudAPIKey        string `mapstructure:"GCLOUD_API" validate:"required"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
