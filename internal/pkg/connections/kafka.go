@@ -121,12 +121,7 @@ func (c *C) KafkaWriteToTopicWithHTTP(e *env.Env, topic string, payload string) 
 }
 
 // GetLastNMessages is a function that is used to get the last N messages from the kafka topic within a given kafka partition
-func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from int64, topic string, partition int) ([]string, error) {
-	offset, err := c.GetLastOffset(ctx, e, topic, partition)
-	if err != nil {
-		return []string{}, err
-	}
-
+func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from, to int64, topic string, partition int) ([]string, error) {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{e.KafkaBroker},
 		Topic:   e.Topic,
@@ -138,7 +133,7 @@ func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from int64, topic 
 	})
 	defer reader.Close()
 
-	err = reader.SetOffset(from)
+	err := reader.SetOffset(from)
 	if err != nil {
 		return []string{}, err
 	}
@@ -153,7 +148,7 @@ func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from int64, topic 
 
 		messages = append(messages, string(m.Value))
 
-		if m.Offset == offset-1 {
+		if m.Offset == to-1 {
 			break
 		}
 	}
