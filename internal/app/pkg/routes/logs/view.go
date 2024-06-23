@@ -32,8 +32,8 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	reader, err := object.NewReader(r.Context())
 	if err != nil {
-		log.Error().Err(err).Msg("failed to initialize the reader")
-		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		log.Error().Err(err).Str("booking_id", bookingID).Msg("failed to initialize the reader, either because the booking id is not valid or some autentication error")
+		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())
 		return
 	}
 	defer reader.Close()
