@@ -16,11 +16,13 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/websockets"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/enums"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/lesismal/nbio/nbhttp"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,6 +39,12 @@ var (
 
 func init() {
 	e.Load()
+
+	if e.Env == string(enums.Dev) {
+		log.Logger = log.Output(zerolog.ConsoleWriter{
+			Out: os.Stderr,
+		})
+	}
 
 	// NOTE: Initialize the most essential services only
 	// No doing so will effect the startup time of the container
