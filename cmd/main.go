@@ -21,7 +21,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/lesismal/nbio/nbhttp"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
@@ -44,10 +43,6 @@ func init() {
 	connector.InitRedis(&e)
 	connector.InitKafkaWriters(&e)
 	connector.InitDB(&e)
-
-	log.Logger = log.Output(zerolog.ConsoleWriter{
-		Out: os.Stderr,
-	})
 
 	rt = routes.Route{
 		E: &e,
