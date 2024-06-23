@@ -2,7 +2,6 @@ package connections
 
 import (
 	"context"
-	"fmt"
 
 	"cloud.google.com/go/storage"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
@@ -16,7 +15,6 @@ func (c *C) InitStorage(e *env.Env) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(key))
 
 	client, err := storage.NewClient(context.Background(), option.WithCredentialsJSON(key))
 	if err != nil {
