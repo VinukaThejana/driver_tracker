@@ -3,8 +3,8 @@ package tokens
 import (
 	"fmt"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/golang-jwt/jwt/v5"
 )
 

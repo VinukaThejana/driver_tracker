@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl"

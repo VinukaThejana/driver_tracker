@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/middlewares"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"

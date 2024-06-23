@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/VinukaThejana/go-utils/logger"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"github.com/spf13/viper"
 )
 

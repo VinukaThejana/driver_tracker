@@ -1,8 +1,8 @@
 package connections
 
 import (
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"googlemaps.github.io/maps"
 )
 

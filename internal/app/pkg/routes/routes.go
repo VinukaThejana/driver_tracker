@@ -4,13 +4,13 @@ package routes
 import (
 	"net/http"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/bookings"
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/index"
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/jobs"
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/logs"
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/routes/stream"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes/bookings"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes/index"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes/jobs"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes/logs"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/routes/stream"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
 )
 

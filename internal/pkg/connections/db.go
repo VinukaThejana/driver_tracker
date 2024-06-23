@@ -7,8 +7,8 @@ import (
 
 	// Driver for the mssql server
 	_ "github.com/denisenkom/go-mssqldb/azuread"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 )
 
 // InitDB is a function that is used to initialize databases

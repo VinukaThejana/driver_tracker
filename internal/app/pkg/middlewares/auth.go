@@ -5,10 +5,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/app/pkg/tokens"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 )
 
 type (

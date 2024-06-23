@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

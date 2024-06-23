@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
-	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/lib"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
