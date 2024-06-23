@@ -40,6 +40,7 @@ func init() {
 	e.Load()
 
 	// NOTE: Initialize the most essential services only
+	// No doing so will effect the startup time of the container
 	connector.InitRedis(&e)
 	connector.InitKafkaWriters(&e)
 	connector.InitDB(&e)
