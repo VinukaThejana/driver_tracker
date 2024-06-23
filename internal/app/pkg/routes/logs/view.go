@@ -1,6 +1,7 @@
 package logs
 
 import (
+	"database/sql"
 	"io"
 	"net/http"
 
@@ -12,6 +13,12 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
+
+type bookingDetails struct {
+	DriverName   *string
+	VehicleModal *string
+	VehicleRegNo *string
+}
 
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	bookingID := chi.URLParam(r, "booking_id")
@@ -57,7 +64,32 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		return
 	}
 
+	var bookingDetails bookingDetails
+	query := "SELECT DriverName, VehicleModal, VehicleRegNo FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
+	err = c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(&bookingDetails.DriverName, &bookingDetails.VehicleModal, &bookingDetails.VehicleRegNo)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get the query from the database")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
+	DriverName := ""
+	VehicleModal := ""
+	VehicleRegNo := ""
+
+	if bookingDetails.DriverName != nil {
+		DriverName = *bookingDetails.DriverName
+	}
+	if bookingDetails.VehicleModal != nil {
+		VehicleModal = *bookingDetails.VehicleModal
+	}
+	if bookingDetails.VehicleRegNo != nil {
+		VehicleRegNo = *bookingDetails.VehicleRegNo
+	}
+
 	lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
-		"cordinates": payload,
+		"driver_name":             DriverName,
+		"vehicle_modal":           VehicleModal,
+		"vehicle_registration_no": VehicleRegNo,
+		"cordinates":              payload,
 	})
 }
