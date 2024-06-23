@@ -24,17 +24,22 @@ env=$(
 		--header "Authorization: Bearer $secret"
 )
 
+escape_value() {
+	echo "$1" | awk '{gsub(/"/, "\\\""); gsub(/\n/, "\\n")}1'
+}
+
 result=""
 
 while IFS= read -r line; do
 	key=$(echo "$line" | cut -d'=' -f1)
-	value=$(echo "$line" | cut -d'=' -f2 | tr -d '"')
+	value=$(echo "$line" | cut -d'=' -f2- | tr -d '"')
+	escaped_value=$(escape_value "$value")
 
 	if [ -n "$key" ]; then
 		if [ -z "$result" ]; then
-			result="${key}=${value}"
+			result="${key}=${escaped_value}"
 		else
-			result="${result},${key}=${value}"
+			result="${result},${key}=${escaped_value}"
 		fi
 	fi
 done <<<"$env"
