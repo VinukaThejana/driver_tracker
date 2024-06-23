@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
@@ -57,4 +58,6 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	}
 
 	lib.JSONResponse(w, http.StatusOK, "removed the current booking from redis")
+
+	go services.SaveBooking(e, c, payload, bookingID)
 }

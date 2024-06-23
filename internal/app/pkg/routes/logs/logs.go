@@ -1,4 +1,4 @@
-// Package log contains the routes related to log dumps related to various jobs
+// Package logs contains the routes related to log dumps related to various jobs
 package logs
 
 import (
