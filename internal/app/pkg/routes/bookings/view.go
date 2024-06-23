@@ -35,7 +35,7 @@ type geo struct {
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	bookingID := chi.URLParam(r, "booking_id")
 	if bookingID == "" {
-		lib.JSONResponse(w, http.StatusBadRequest, "please provide a proper booking id")
+		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())
 		return
 	}
 

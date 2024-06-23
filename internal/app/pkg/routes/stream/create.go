@@ -45,7 +45,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 
 	if err := v.Struct(reqBody); err != nil {
 		log.Error().Err(err).Msg("validation error, invalid data is provided")
-		lib.JSONResponse(w, http.StatusBadRequest, "please provide a proper booking id")
+		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())
 		return
 	}
 
