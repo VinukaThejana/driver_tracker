@@ -3,7 +3,9 @@ set dotenv-load
 default:
   @just --choose
 
-# Connect with the Redis database
+run:
+  go run cmd/main.go
+
 redis:
   iredis --url $(echo $REDIS_DB_URL)
 
