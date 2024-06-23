@@ -85,7 +85,11 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 			return
 		}
 
-		c.InitStorage(e)
+		err = c.InitStorage(e)
+		if err != nil {
+			log.Error().Err(err).Int("start", int(startOffset)).Int("end", int(endOffset)).Msg("failed to initialize the storage client")
+			return
+		}
 		defer c.S.Close()
 
 		bucket := c.S.Bucket(e.BucketName)
