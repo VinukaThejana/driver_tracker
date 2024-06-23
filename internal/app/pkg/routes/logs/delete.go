@@ -19,13 +19,18 @@ func delete(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
-	c.InitStorage(e)
+	err := c.InitStorage(e)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize the google cloud storage client")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
 	defer c.S.Close()
 
 	bucket := c.S.Bucket(e.BucketName)
 	object := bucket.Object(bookingID)
 
-	err := object.Delete(r.Context())
+	err = object.Delete(r.Context())
 	if err != nil {
 		log.Error().Err(err).Str("booking_id", bookingID).Msg("failed to delete the object possibly the booking id is not valid")
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())

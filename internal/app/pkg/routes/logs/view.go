@@ -19,7 +19,12 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())
 	}
 
-	c.InitStorage(e)
+	err := c.InitStorage(e)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to initialize the storage client")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
 	defer c.S.Close()
 
 	bucket := c.S.Bucket(e.BucketName)
