@@ -7,7 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
+	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl"
 	"github.com/segmentio/kafka-go/sasl/scram"
@@ -121,7 +123,9 @@ func (c *C) KafkaWriteToTopicWithHTTP(e *env.Env, topic string, payload string) 
 }
 
 // GetLastNMessages is a function that is used to get the last N messages from the kafka topic within a given kafka partition
-func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from, to int64, topic string, partition int) ([]string, error) {
+func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from, to int64, topic string, partition int) ([]any, error) {
+	messages := []any{}
+
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers: []string{e.KafkaBroker},
 		Topic:   e.Topic,
@@ -135,18 +139,24 @@ func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from, to int64, to
 
 	err := reader.SetOffset(from)
 	if err != nil {
-		return []string{}, err
+		return messages, err
 	}
 
-	messages := []string{}
+	var payload any
 
 	for {
 		m, err := reader.ReadMessage(ctx)
 		if err != nil {
-			return []string{}, err
+			return messages, err
 		}
 
-		messages = append(messages, string(m.Value))
+		err = sonic.Unmarshal(m.Value, &payload)
+		if err != nil {
+			log.Error().Err(err).Str("value", string(m.Value)).Msg("failed to unmarshal the payload receiving from kafka")
+			continue
+		}
+
+		messages = append(messages, payload)
 
 		if m.Offset == to-1 {
 			break
