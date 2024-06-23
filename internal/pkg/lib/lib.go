@@ -2,7 +2,9 @@
 package lib
 
 import (
+	"encoding/base64"
 	"net/http"
+	"strings"
 
 	"github.com/VinukaThejana/go-utils/logger"
 	"github.com/bytedance/sonic"
@@ -49,4 +51,34 @@ func JSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[strin
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	sonic.ConfigDefault.NewEncoder(w).Encode(res)
+}
+
+// Base64URLDecode decodes base64url string to byte array
+// The following functions are adapted from the code provided by DV[dvsekhvalnov]
+// Source: https://github.com/dvsekhvalnov/jose2go/blob/master/base64url/base64url.go
+func Base64URLDecode(data string) ([]byte, error) {
+	data = strings.ReplaceAll(data, "-", "+") // 62nd char of encoding
+	data = strings.ReplaceAll(data, "_", "/") // 63rd char of encoding
+
+	switch len(data) % 4 { // Pad with trailing '='s
+	case 0: // no padding
+	case 2:
+		data += "==" // 2 pad chars
+	case 3:
+		data += "=" // 1 pad char
+	}
+
+	return base64.StdEncoding.DecodeString(data)
+}
+
+// Base64URLEncode encodes given byte array to base64url string
+// The following functions are adapted from the code provided by DV[dvsekhvalnov]
+// Source: https://github.com/dvsekhvalnov/jose2go/blob/master/base64url/base64url.go
+func Base64URLEncode(data []byte) string {
+	result := base64.StdEncoding.EncodeToString(data)
+	result = strings.ReplaceAll(result, "+", "-") // 62nd char of encoding
+	result = strings.ReplaceAll(result, "/", "_") // 63rd char of encoding
+	result = strings.ReplaceAll(result, "=", "")  // Remove any trailing '='s
+
+	return result
 }
