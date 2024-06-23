@@ -16,6 +16,9 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 	r.Get("/view/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
 		view(w, r, e, c)
 	})
+	r.Delete("/delete/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
+		delete(w, r, e, c)
+	})
 
 	return r
 }
