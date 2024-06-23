@@ -27,7 +27,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	reader, err := object.NewReader(r.Context())
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("failed to initialize the reader")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
@@ -35,7 +35,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	data, err := io.ReadAll(reader)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("failed to read the data")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
@@ -47,7 +47,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	var payload any
 	err = sonic.Unmarshal(data, &payload)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Interface("payload", payload).Msg("failed to marshal the data from the payload")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
