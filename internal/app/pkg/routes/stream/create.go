@@ -118,8 +118,21 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 
 	partition := available[0]
+	lastOffset, err := c.GetLastOffset(r.Context(), e, e.Topic, partition)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to get the lastoffset")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
 
-	err = client.SetEx(r.Context(), reqBody.BookingID, partition, 24*time.Hour).Err()
+	payload, err := sonic.MarshalString([]int{partition, int(lastOffset) + 1})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to marshal the interface")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
+
+	err = client.SetEx(r.Context(), reqBody.BookingID, payload, 24*time.Hour).Err()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to assing the booking to the partition")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())

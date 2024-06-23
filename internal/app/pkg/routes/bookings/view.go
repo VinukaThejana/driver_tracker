@@ -44,7 +44,6 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	if val != "" {
 		started = true
 	}
-
 	var payload bookingDetails
 
 	query := "SELECT BookRefNo, DriverName, ContactNo, VehicleModal, VehicleRegNo, BookPickUpAddr, BookDropAddr FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"

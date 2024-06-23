@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
@@ -32,12 +32,14 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		http.Error(w, "please provide a valid booking id", http.StatusBadRequest)
 		return
 	}
-	partitionNo, err := strconv.Atoi(val)
+	payload := make([]int, 2)
+	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to convert the partition number from string to int")
+		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
 		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
+	partitionNo := payload[0]
 
 	flusher, ok := w.(http.Flusher)
 	if !ok {

@@ -2,8 +2,8 @@ package stream
 
 import (
 	"net/http"
-	"strconv"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
@@ -24,12 +24,14 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
 	}
-	partition, err := strconv.Atoi(val)
+	payload := make([]int, 2)
+	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to convert the partition to integer")
+		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
 		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
+	partition := payload[0]
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {

@@ -10,7 +10,7 @@ import (
 )
 
 // Router contains all the routes that do not have a collection
-func Router(e *env.Env, c *connections.C) http.Handler {
+func Router(e *env.Env, _ *connections.C) http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/api/doc", func(w http.ResponseWriter, r *http.Request) {

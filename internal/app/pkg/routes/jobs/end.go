@@ -3,8 +3,8 @@ package jobs
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/env"
 	"github.com/flitlabs/spotoncars-stream-go/internal/pkg/errors"
@@ -27,12 +27,15 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusBadRequest, "provided booking id is not valid")
 		return
 	}
-	partitionNo, err := strconv.Atoi(val)
+	payload := make([]int, 2)
+	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to convert partition number string to an integer")
-		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
+		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
+	partitionNo := payload[0]
+
 	driverTokenID := client.Get(r.Context(), fmt.Sprint(partitionNo)).Val()
 	if driverTokenID == "" {
 		lib.JSONResponse(w, http.StatusUnauthorized, errors.ErrUnauthorized.Error())
