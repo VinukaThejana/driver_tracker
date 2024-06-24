@@ -16,7 +16,7 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 
 	r.Route("/", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsAdmin(h, e, c)
+			return middlewares.IsSuperAdmin(h, e, c)
 		})
 		r.Delete("/end/{booking_id}", func(w http.ResponseWriter, r *http.Request) {
 			end(w, r, e, c)

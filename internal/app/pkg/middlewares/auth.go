@@ -125,8 +125,8 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 	})
 }
 
-// IsAdmin is a middleware that is used to make sure that the requesting user is the admin
-func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+// IsSuperAdmin is a middleware that is used to make sure that the requesting user is the admin
+func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		secret := r.URL.Query().Get("secret")
 		if secret != e.AdminSecret {
