@@ -39,6 +39,9 @@ type Env struct {
 	BucketName          string `mapstructure:"BUCKET_NAME" validate:"required"`
 	Env                 string `mapstructure:"ENV" validate:"required"`
 	AdminTokenSecret    string `mapstructure:"ADMIN_TOKEN_SECRET" validate:"required"`
+	DriverCookieName    string `mapstructure:"DRIVER_COOKIE_NAME" validate:"required"`
+	BookingCookieName   string `mapstructure:"BOOKING_COOKIE_NAME" validate:"required"`
+	AdminCookieName     string `mapstructure:"ADMIN_COOKIE_NAME" validate:"required"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`

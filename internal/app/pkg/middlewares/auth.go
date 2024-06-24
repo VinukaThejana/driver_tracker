@@ -49,7 +49,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 		if len(authorization) == 2 {
 			driverToken = authorization[1]
 		} else {
-			driverTokenC, err := r.Cookie("EncryptKey")
+			driverTokenC, err := r.Cookie(e.DriverCookieName)
 			if err != nil {
 				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 				return
@@ -90,7 +90,7 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 		if len(authorization) == 2 {
 			bookingToken = authorization[1]
 		} else {
-			bookingTokenC, err := r.Cookie("booking_token")
+			bookingTokenC, err := r.Cookie(e.BookingCookieName)
 			if err != nil {
 				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 				return
@@ -154,7 +154,7 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 		if len(authorization) == 2 {
 			adminToken = authorization[1]
 		} else {
-			adminTokenC, err := r.Cookie("EncryptKey")
+			adminTokenC, err := r.Cookie(e.AdminCookieName)
 			if err != nil {
 				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 				return
