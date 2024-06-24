@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 type (
@@ -20,6 +22,8 @@ type (
 	BookingIDCtx string
 	// PartitionNoCtx contains the type for the partition no type
 	PartitionNoCtx string
+	// AdminIDCtx contains the type for the Admin ID
+	AdminIDCtx string
 )
 
 const (
@@ -31,6 +35,8 @@ const (
 	BookingID BookingIDCtx = "booking_id"
 	// PartitionNo is a key to notate the partition number
 	PartitionNo PartitionNoCtx = "partition_no"
+	// AdminID is a key to indicate the admin id
+	AdminID AdminIDCtx = "admin_id"
 )
 
 // IsDriver is a middleware that is used to check wether the driver is logged in
@@ -125,7 +131,7 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 	})
 }
 
-// IsSuperAdmin is a middleware that is used to make sure that the requesting user is the admin
+// IsSuperAdmin is a middleware that is used to make sure that the requesting user is the super admin (usually the developer)
 func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		secret := r.URL.Query().Get("secret")
@@ -135,5 +141,49 @@ func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler 
 		}
 
 		next.ServeHTTP(w, r)
+	})
+}
+
+// IsAdmin is a middleware that is used to make sure that the requesting user is a spoton admin
+func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		adminToken := ""
+		unauthorizedErr := errors.ErrUnauthorized
+
+		authorization := strings.Split(r.Header.Get("Authorization"), " ")
+		if len(authorization) == 2 {
+			adminToken = authorization[1]
+		} else {
+			adminTokenC, err := r.Cookie("EncryptKey")
+			if err != nil {
+				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			adminToken = adminTokenC.Value
+		}
+
+		at := tokens.AdminToken{
+			E: e,
+			C: c,
+		}
+
+		isValid, token := at.Validate(adminToken)
+		if !isValid {
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		adminID, err := at.Get(token)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to validate the admin token")
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		ctx := r.Context()
+		ctx = context.WithValue(ctx, AdminID, fmt.Sprint(adminID))
+
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
