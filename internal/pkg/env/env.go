@@ -38,6 +38,7 @@ type Env struct {
 	GcloudAPIKey        string `mapstructure:"GCLOUD_API" validate:"required"`
 	BucketName          string `mapstructure:"BUCKET_NAME" validate:"required"`
 	Env                 string `mapstructure:"ENV" validate:"required"`
+	AdminTokenSecret    string `mapstructure:"ADMIN_TOKEN_SECRET" validate:"required"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
