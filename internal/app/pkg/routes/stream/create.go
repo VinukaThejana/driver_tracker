@@ -39,7 +39,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	v := validator.New()
 
 	if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody); err != nil {
-		lib.JSONResponse(w, http.StatusUnsupportedMediaType, "failed to decode the request body")
+		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
 	}
 
