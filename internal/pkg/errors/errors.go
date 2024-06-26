@@ -16,4 +16,6 @@ var (
 	ErrNotAdmin = fmt.Errorf("you are not an admin to perform this operation")
 	// ErrBookingIDNotValid is to indicate that the given booking id is not valid
 	ErrBookingIDNotValid = fmt.Errorf("booking id you provided is not valid")
+	// ErrUnsuportedMedia is to indicate that the request body that the client is providing is not supported
+	ErrUnsuportedMedia = fmt.Errorf("request body is not supported")
 )
