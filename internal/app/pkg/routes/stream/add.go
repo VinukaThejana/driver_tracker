@@ -16,14 +16,19 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type req struct {
+	Lat float64 `json:"lat" validate:"required,latitude"`
+	Lon float64 `json:"lon" validate:"required,longitude"`
+}
+
 // add is a route that is used to add data to the stream
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
-	const maxRequestBodySize = 1 << 20
+	const maxRequestBodySize = 1 << 6
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
 	var (
-		data    map[string]interface{}
+		data    req
 		payload string
 		err     error
 	)
@@ -35,13 +40,21 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		return
 	}
 
+	if err = v.Struct(data); err != nil {
+		log.Error().Err(err).Interface("body", data).Msg("failed to validate the request body")
+		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBadRequest.Error())
+		return
+	}
+
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
-	data["timestamp"] = time.Now().UTC().Unix()
 
-	payload, err = sonic.MarshalString(data)
+	payload, err = sonic.MarshalString(map[string]interface{}{
+		"lat":       data.Lat,
+		"lon":       data.Lon,
+		"timestamp": time.Now().UTC().Unix(),
+	})
 	if err != nil {
-		log.Error().Err(err).Msg("error marshaling the request body")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}

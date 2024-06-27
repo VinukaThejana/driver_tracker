@@ -15,6 +15,11 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
+type req struct {
+	Lat float64 `json:"lat" validate:"required,latitude"`
+	Lon float64 `json:"lon" validate:"required,longitude"`
+}
+
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
@@ -26,7 +31,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
 		var (
-			data    map[string]interface{}
+			data    req
 			payload string
 			err     error
 		)
@@ -35,8 +40,16 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			log.Error().Err(err).Msg("provide valid JSON data")
 			return
 		}
-		data["timestamp"] = time.Now().UTC().Unix()
-		if payload, err = sonic.MarshalString(data); err != nil {
+		if err = v.Struct(data); err != nil {
+			log.Error().Err(err).Interface("body", data).Msg("provided data with the websocket connection is not valid")
+			return
+		}
+
+		if payload, err = sonic.MarshalString(map[string]interface{}{
+			"lat":       data.Lat,
+			"lon":       data.Lon,
+			"timestamp": time.Now().UTC().Unix(),
+		}); err != nil {
 			log.Error().Err(err).Msg("failed to marshal data")
 			return
 		}

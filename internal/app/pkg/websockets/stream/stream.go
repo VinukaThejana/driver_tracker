@@ -8,7 +8,10 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 )
+
+var v = validator.New()
 
 // WebSocket contains all the websockets that are related to the stream
 func WebSocket(e *env.Env, c *connections.C) http.Handler {

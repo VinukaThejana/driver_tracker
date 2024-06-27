@@ -8,7 +8,10 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 )
+
+var v = validator.New()
 
 // Router a route group that contains all the routes that are related to stream
 func Router(e *env.Env, c *connections.C) http.Handler {
