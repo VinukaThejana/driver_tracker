@@ -18,6 +18,7 @@ func Router(e *env.Env, _ *connections.C) http.Handler {
 	})
 	r.Get("/health", health)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "https://github.com/flitlabs/spotoncars_stream", http.StatusTemporaryRedirect)
 	})
 
 	return r
