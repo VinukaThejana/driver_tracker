@@ -7,6 +7,7 @@ import (
 
 	// Driver for the mssql server
 	_ "github.com/denisenkom/go-mssqldb/azuread"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/enums"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 )
@@ -14,7 +15,12 @@ import (
 // InitDB is a function that is used to initialize databases
 func (c *C) InitDB(e *env.Env) {
 	username := e.DBUser
-	password := url.QueryEscape(fmt.Sprintf("%s#$%s@#$%d", e.DBPassword1, e.DBPassword2, e.DBPassword3))
+	password := ""
+	if e.Env == string(enums.Prd) {
+		password = e.DBPassword1
+	} else {
+		password = url.QueryEscape(fmt.Sprintf("%s#$%s@#$%d", e.DBPassword1, e.DBPassword2, e.DBPassword3))
+	}
 	host := e.DBHost
 	port := e.DBPort
 	database := e.DBDatabase

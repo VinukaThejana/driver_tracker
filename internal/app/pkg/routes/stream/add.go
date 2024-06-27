@@ -2,8 +2,6 @@ package stream
 
 import (
 	"context"
-	ers "errors"
-	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,14 +30,8 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		if ers.Is(err, io.EOF) {
-			log.Error().Msg("request body is empty")
-			lib.JSONResponse(w, http.StatusBadRequest, "body cannot be empty, please provide valid json")
-			return
-		}
-
-		log.Error().Msg("invalid request body provided by the client")
-		lib.JSONResponse(w, http.StatusBadRequest, "failed to parse data invalid json")
+		log.Error().Err(err).Msg("request body is not supported")
+		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
 	}
 
