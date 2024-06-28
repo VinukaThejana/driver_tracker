@@ -16,8 +16,9 @@ import (
 )
 
 type req struct {
-	Lat float64 `json:"lat" validate:"required,latitude"`
-	Lon float64 `json:"lon" validate:"required,longitude"`
+	Heading *float64 `json:"heading"`
+	Lat     float64  `json:"lat" validate:"required,latitude"`
+	Lon     float64  `json:"lon" validate:"required,longitude"`
 }
 
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
@@ -46,8 +47,15 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		}
 
 		if payload, err = sonic.MarshalString(map[string]interface{}{
-			"lat":       data.Lat,
-			"lon":       data.Lon,
+			"lat": data.Lat,
+			"lon": data.Lon,
+			"heading": func() float64 {
+				if data.Heading == nil {
+					return 0
+				}
+
+				return *data.Heading
+			}(),
 			"timestamp": time.Now().UTC().Unix(),
 		}); err != nil {
 			log.Error().Err(err).Msg("failed to marshal data")

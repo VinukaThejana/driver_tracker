@@ -17,13 +17,14 @@ import (
 )
 
 type req struct {
-	Lat float64 `json:"lat" validate:"required,latitude"`
-	Lon float64 `json:"lon" validate:"required,longitude"`
+	Heading *float64 `json:"heading"`
+	Lat     float64  `json:"lat" validate:"required,latitude"`
+	Lon     float64  `json:"lon" validate:"required,longitude"`
 }
 
 // add is a route that is used to add data to the stream
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
-	const maxRequestBodySize = 1 << 6
+	const maxRequestBodySize = 1 << 7
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
@@ -45,13 +46,18 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBadRequest.Error())
 		return
 	}
-
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
 	payload, err = sonic.MarshalString(map[string]interface{}{
-		"lat":       data.Lat,
-		"lon":       data.Lon,
+		"lat": data.Lat,
+		"lon": data.Lon,
+		"heading": func() float64 {
+			if data.Heading == nil {
+				return 0
+			}
+			return *data.Heading
+		}(),
 		"timestamp": time.Now().UTC().Unix(),
 	})
 	if err != nil {
