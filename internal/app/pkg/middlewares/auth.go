@@ -162,7 +162,6 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 
 			adminToken = adminTokenC.Value
 		}
-		fmt.Printf("adminToken: %v\n", adminToken)
 
 		at := tokens.AdminToken{
 			E: e,

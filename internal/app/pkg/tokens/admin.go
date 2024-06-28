@@ -43,7 +43,7 @@ func (at *AdminToken) Get(token *jwt.Token) (id int, err error) {
 		return -1, fmt.Errorf("failed to map the claims of the jwt")
 	}
 
-	val, ok := claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid"].(string)
+	val, ok := claims["sub"].(string)
 	if !ok {
 		return -1, fmt.Errorf("cannot parse the driver id")
 	}
