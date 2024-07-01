@@ -17,6 +17,8 @@ import (
 	"googlemaps.github.io/maps"
 )
 
+// TODO: remove the usage of the google geocode API and replace it with the proper latitude and longitude cordinates
+
 type bookingDetails struct {
 	BookRefNo       *string
 	BookPassengerNm *string
@@ -187,10 +189,10 @@ func geocode(ctx context.Context, c *connections.C, data []string) ([]geo, error
 			Address: pickup,
 		})
 		if err != nil {
-			return []geo{}, nil
+			return []geo{}, err
 		}
 		if len(route) == 0 {
-			return []geo{}, fmt.Errorf("failed to geocode the street address")
+			continue
 		}
 
 		pickups = append(pickups, geo{
