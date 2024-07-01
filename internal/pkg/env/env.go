@@ -42,6 +42,8 @@ type Env struct {
 	DriverCookieName    string `mapstructure:"DRIVER_COOKIE_NAME" validate:"required"`
 	BookingCookieName   string `mapstructure:"BOOKING_COOKIE_NAME" validate:"required"`
 	AdminCookieName     string `mapstructure:"ADMIN_COOKIE_NAME" validate:"required"`
+	BookingToken        string `mapstructure:"BOOKING_TOKEN"`
+	AdminToken          string `mapstructure:"ADMIN_TOKEN"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
