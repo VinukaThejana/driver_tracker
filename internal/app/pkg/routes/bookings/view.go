@@ -18,13 +18,17 @@ import (
 )
 
 type bookingDetails struct {
-	BookRefNo      *string
-	DriverName     *string
-	ContactNo      *string
-	VehicleModal   *string
-	VehicleRegNo   *string
-	BookPickUpAddr *string
-	BookDropAddr   *string
+	BookRefNo       *string
+	BookPassengerNm *string
+	BookingContact  *string
+	BookPickUpAddr  *string
+	BookDropAddr    *string
+	DriverName      *string
+	DriverContact   *string
+	VehicleRegNo    *string
+	VehicleModel    *string
+	VehicleColor    *string
+	BookTotal       *float64
 }
 
 type geo struct {
@@ -47,8 +51,37 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	}
 	var payload bookingDetails
 
-	query := "SELECT BookRefNo, DriverName, ContactNo, VehicleModal, VehicleRegNo, BookPickUpAddr, BookDropAddr FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
-	err := c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(&payload.BookRefNo, &payload.DriverName, &payload.ContactNo, &payload.VehicleModal, &payload.VehicleRegNo, &payload.BookPickUpAddr, &payload.BookDropAddr)
+	query := `SELECT
+	bookings.BookRefNo,
+	bookings.BookPassengerNm,
+	bookings.BookingContact,
+	bookings.BookPickUpAddr,
+	bookings.BookDropAddr,
+	bookings.BookTotal,
+	bookings.DriverName,
+	bookings.DriverContact,
+	vehicles.VehicleRegNo,
+	vehicles.VehicleModel,
+	vehicles.VehicleColor
+FROM
+	Tbl_BookingDetails bookings
+	INNER JOIN Tbl_VehicleDetails vehicles ON bookings.VehicleId = vehicles.VehicleId
+WHERE
+	bookings.BookRefNo = @BookRefNo`
+
+	err := c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(
+		&payload.BookRefNo,
+		&payload.BookPassengerNm,
+		&payload.BookingContact,
+		&payload.BookPickUpAddr,
+		&payload.BookDropAddr,
+		&payload.BookTotal,
+		&payload.DriverName,
+		&payload.DriverContact,
+		&payload.VehicleRegNo,
+		&payload.VehicleModel,
+		&payload.VehicleColor,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			lib.JSONResponse(w, http.StatusNotFound, errs.ErrBookingIDNotValid.Error())
@@ -62,26 +95,41 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	c.InitMap(e)
 
+	BookPassengerNm := ""
+	BookingContact := ""
 	DriverName := ""
-	ContactNo := ""
-	VehicleModal := ""
+	DriverContact := ""
 	VehicleRegNo := ""
+	VehicleModel := ""
+	VehicleColor := ""
+	BookTotal := 0.0
 
-	pickups := []geo{}
-	dropoffs := []geo{}
-
+	if payload.BookPassengerNm != nil {
+		BookPassengerNm = *payload.BookPassengerNm
+	}
+	if payload.BookingContact != nil {
+		BookingContact = *payload.BookingContact
+	}
+	if payload.BookTotal != nil {
+		BookTotal = *payload.BookTotal
+	}
 	if payload.DriverName != nil {
 		DriverName = *payload.DriverName
 	}
-	if payload.ContactNo != nil {
-		ContactNo = *payload.ContactNo
-	}
-	if payload.VehicleModal != nil {
-		VehicleModal = *payload.VehicleModal
+	if payload.DriverContact != nil {
+		DriverContact = *payload.DriverContact
 	}
 	if payload.VehicleRegNo != nil {
 		VehicleRegNo = *payload.VehicleRegNo
 	}
+	if payload.VehicleModel != nil {
+		VehicleModel = *payload.VehicleModel
+	}
+	if payload.VehicleColor != nil {
+		VehicleColor = *payload.VehicleColor
+	}
+
+	pickups := []geo{}
 	if payload.BookPickUpAddr != nil {
 		payload, err := geocode(r.Context(), c, seperator(*payload.BookPickUpAddr))
 		if err != nil {
@@ -91,6 +139,8 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		}
 		pickups = append(pickups, payload...)
 	}
+
+	dropoffs := []geo{}
 	if payload.BookDropAddr != nil {
 		payload, err := geocode(r.Context(), c, seperator(*payload.BookDropAddr))
 		if err != nil {
@@ -104,14 +154,18 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	data := map[string]any{}
 	data["active"] = started
+	data["name"] = BookPassengerNm
+	data["contact_no"] = BookingContact
+	data["total"] = BookTotal
 	data["driver_name"] = DriverName
-	data["contact_no"] = ContactNo
-	data["vehicle_modal"] = VehicleModal
+	data["driver_contact"] = DriverContact
 	data["vehicle_registration_no"] = VehicleRegNo
+	data["vehicle_modal"] = VehicleModel
+	data["vehicle_color"] = VehicleColor
 	data["pickups"] = pickups
 	data["dropoffs"] = dropoffs
 	if started {
-		data["stream"] = fmt.Sprintf("ws://%s/ws/stream/view/%s", e.Host, bookingID)
+		data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.Host, bookingID)
 	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, data)
