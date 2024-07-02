@@ -2,7 +2,9 @@
 package lib
 
 import (
+	"crypto/rand"
 	"encoding/base64"
+	"encoding/hex"
 	"net/http"
 	"strings"
 
@@ -81,4 +83,13 @@ func Base64URLEncode(data []byte) string {
 	result = strings.ReplaceAll(result, "=", "")  // Remove any trailing '='s
 
 	return result
+}
+
+// GenerateToken is a function that is used to generate a token of a given length
+func GenerateToken(length int) string {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	return hex.EncodeToString(b)
 }
