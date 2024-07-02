@@ -2,14 +2,17 @@ package middlewares
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -43,7 +46,7 @@ const (
 func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		driverToken := ""
-		unauthorizedErr := errors.ErrUnauthorized
+		unauthorizedErr := errs.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -88,7 +91,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookingToken := ""
-		unauthorizedErr := errors.ErrUnauthorized
+		unauthorizedErr := errs.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -135,22 +138,71 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 	})
 }
 
+func isSuperAdmin(r *http.Request, e *env.Env, _ *connections.C) (isAdmin bool, err error) {
+	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("https://edge-config.vercel.com/%s/item/secret", e.EdgeConfig), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Add("Authorization", "Bearer "+e.EdgeConfigReadToken)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return false, errs.ErrServer
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false, errs.ErrServer
+	}
+
+	var payload any
+	err = sonic.Unmarshal(body, &payload)
+	if err != nil {
+		return false, err
+	}
+	secret, ok := payload.(string)
+	if !ok {
+		return false, errs.ErrServer
+	}
+	key := r.URL.Query().Get("secret")
+	if key != secret {
+		return false, errs.ErrUnauthorized
+	}
+
+	return true, nil
+}
+
 // IsSuperAdmin is a middleware that is used to make sure that the requesting user is the super admin (usually the developer)
 func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		secret := r.URL.Query().Get("secret")
-		if secret != e.AdminSecret {
-			http.Error(w, errors.ErrNotAdmin.Error(), http.StatusUnauthorized)
+		isSuperAdmin, err := isSuperAdmin(r, e, c)
+		if err != nil {
+			if errors.Is(err, errs.ErrUnauthorized) {
+				http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			log.Error().Err(err).Msg("failed to validate the superadmin")
+			http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
 			return
 		}
-
+		if !isSuperAdmin {
+			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
 }
 
 func getAdmin(r *http.Request, e *env.Env, c *connections.C) (adminID int, err error) {
 	adminToken := ""
-	unauthorizedErr := errors.ErrUnauthorized
+	unauthorizedErr := errs.ErrUnauthorized
 
 	authorization := strings.Split(r.Header.Get("Authorization"), " ")
 	if len(authorization) == 2 {
@@ -187,15 +239,15 @@ func getAdmin(r *http.Request, e *env.Env, c *connections.C) (adminID int, err e
 // IsAdminOrIsSuperAdmin is a middleware that is used to check wether the requesting user is the super admin or the admin
 func IsAdminOrIsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		secret := r.URL.Query().Get("secret")
-		if secret == e.AdminSecret {
+		isSuperAdmin, _ := isSuperAdmin(r, e, c)
+		if isSuperAdmin {
 			next.ServeHTTP(w, r)
 			return
 		}
 
 		_, err := getAdmin(r, e, c)
 		if err != nil {
-			http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -208,7 +260,7 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		adminID, err := getAdmin(r, e, c)
 		if err != nil {
-			http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 
