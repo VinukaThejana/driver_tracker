@@ -47,6 +47,7 @@ type Env struct {
 	StgURL              string `mapstructure:"STG_URL"`
 	PrdURL              string `mapstructure:"PRD_URL"`
 	VercelToken         string `mapstructure:"VERCEL_TOKEN" validate:"required"`
+	EdgeConfig          string `mapstructure:"EDGE_CONFIG" validate:"required"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
