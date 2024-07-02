@@ -2,6 +2,7 @@ package tokens
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -36,19 +37,26 @@ func (dt *DriverToken) Validate(str string) (isValid bool, token *jwt.Token) {
 	if role != "D" {
 		return false, nil
 	}
+	_, ok = claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid"].(string)
+	if !ok {
+		return false, nil
+	}
 
 	return true, token
 }
 
 // Get is a function that is used to get the claims of the given JWT token
-func (dt *DriverToken) Get(token *jwt.Token) (email, role string, err error) {
+func (dt *DriverToken) Get(token *jwt.Token) (driverID int, role string, err error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
-		return "", "", fmt.Errorf("failed to map the claims of the jwt")
+		return -1, "", fmt.Errorf("failed to map the claims of the jwt")
 	}
 
-	email = claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"].(string)
-	role = claims["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].(string)
+	driverID, err = strconv.Atoi(claims["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid"].(string))
+	if err != nil {
+		return -1, "", fmt.Errorf("failed to validate the driverID")
+	}
 
-	return email, role, nil
+	role = claims["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"].(string)
+	return driverID, role, nil
 }
