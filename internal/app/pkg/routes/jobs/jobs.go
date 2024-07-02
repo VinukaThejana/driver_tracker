@@ -30,6 +30,9 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 			reset(w, r, e, c)
 		})
 	})
+	r.Patch("/rotate", func(w http.ResponseWriter, r *http.Request) {
+		rotate(w, r, e, c)
+	})
 
 	return r
 }
