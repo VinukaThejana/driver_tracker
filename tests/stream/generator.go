@@ -1,3 +1,4 @@
+// Generate random latitudes and longitudes for testing the stream
 package main
 
 import (
