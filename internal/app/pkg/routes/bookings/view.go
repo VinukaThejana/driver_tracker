@@ -167,7 +167,7 @@ WHERE
 	data["pickups"] = pickups
 	data["dropoffs"] = dropoffs
 	if started {
-		data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.Host, bookingID)
+		data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.WebsocketURL, bookingID)
 	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, data)
