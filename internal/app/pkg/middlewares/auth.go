@@ -270,3 +270,16 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
+
+// IsCron is a middleware that is used to make sure that the requesting entity is a cronjob
+func IsCron(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		secret := r.URL.Query().Get("secret")
+		if secret != e.AdminSecret {
+			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
