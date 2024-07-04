@@ -23,6 +23,8 @@ func (bt *BookingToken) Create(
 	driverID int,
 	bookingID string,
 	partitionNo int,
+	newOffset int,
+	payload string,
 ) (token string, err error) {
 	now := time.Now().UTC()
 
@@ -53,6 +55,8 @@ func (bt *BookingToken) Create(
 	pipe := bt.C.R.DB.Pipeline()
 	pipe.SetNX(ctx, id.String(), true, duration)
 	pipe.SetNX(ctx, fmt.Sprint(partitionNo), id.String(), duration)
+	pipe.SetNX(ctx, bookingID, payload, duration)
+	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), fmt.Sprint(newOffset), duration+8*time.Hour)
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return "", err

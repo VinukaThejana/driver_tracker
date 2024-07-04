@@ -124,17 +124,11 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
+	newOffset := int(lastOffset) + 1
 
-	payload, err := sonic.MarshalString([]int{partition, int(lastOffset) + 1})
+	payload, err := sonic.MarshalString([]int{partition, newOffset})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the interface")
-		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
-		return
-	}
-
-	err = client.SetEx(r.Context(), reqBody.BookingID, payload, 24*time.Hour).Err()
-	if err != nil {
-		log.Error().Err(err).Msg("failed to assing the booking to the partition")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
@@ -143,7 +137,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		C: c,
 		E: e,
 	}
-	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition)
+	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition, newOffset, payload)
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
