@@ -30,8 +30,16 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 			reset(w, r, e, c)
 		})
 	})
-	r.Patch("/rotate", func(w http.ResponseWriter, r *http.Request) {
-		rotate(w, r, e, c)
+	r.Route("/", func(r chi.Router) {
+		r.Use(func(h http.Handler) http.Handler {
+			return middlewares.IsCron(h, e, c)
+		})
+		r.Patch("/rotate", func(w http.ResponseWriter, r *http.Request) {
+			rotate(w, r, e, c)
+		})
+		r.Patch("/check_job", func(w http.ResponseWriter, r *http.Request) {
+			checkJob(w, r, e, c)
+		})
 	})
 
 	return r

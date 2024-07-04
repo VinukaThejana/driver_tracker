@@ -23,13 +23,7 @@ type payload struct {
 	Items []item `json:"items"`
 }
 
-func rotate(w http.ResponseWriter, r *http.Request, e *env.Env, _ *connections.C) {
-	secret := r.URL.Query().Get("secret")
-	if secret != e.AdminSecret {
-		http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
-		return
-	}
-
+func rotate(w http.ResponseWriter, _ *http.Request, e *env.Env, _ *connections.C) {
 	data, err := sonic.Marshal(payload{
 		Items: []item{
 			{
