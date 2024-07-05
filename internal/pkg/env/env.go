@@ -55,6 +55,7 @@ type Env struct {
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
 	Port                int    `mapstructure:"PORT" validate:"required"`
 	DBPort              int    `mapstructure:"DB_PORT" validate:"required"`
+	MaxConnections      int    `mapstructure:"MAX_CONNECTIONS" validate:"required"`
 }
 
 // Load is a function that is used to Load environment variables
