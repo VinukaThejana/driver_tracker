@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/golang-jwt/jwt/v5"
@@ -38,6 +39,11 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
+	nPayload, err := sonic.MarshalString([]string{bookingID, fmt.Sprint(newOffset)})
+	if err != nil {
+		return "", err
+	}
+
 	claims := make(jwt.MapClaims)
 	claims["sub"] = id.String()
 	claims["exp"] = now.Add(duration).Unix()
@@ -56,7 +62,7 @@ func (bt *BookingToken) Create(
 	pipe.SetNX(ctx, id.String(), true, duration)
 	pipe.SetNX(ctx, fmt.Sprint(partitionNo), id.String(), duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
-	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), fmt.Sprint(newOffset), duration+8*time.Hour)
+	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), nPayload, duration)
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return "", err
