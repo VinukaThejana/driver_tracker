@@ -62,6 +62,7 @@ func (bt *BookingToken) Create(
 	pipe.SetNX(ctx, id.String(), true, duration)
 	pipe.SetNX(ctx, fmt.Sprint(partitionNo), id.String(), duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
+	pipe.SetNX(ctx, fmt.Sprintf("c%d", partitionNo), 0, duration)
 	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), nPayload, duration+12*time.Hour)
 	_, err = pipe.Exec(ctx)
 	if err != nil {

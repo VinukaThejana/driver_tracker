@@ -35,6 +35,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	pipe.Del(r.Context(), bookingID)
 	pipe.Del(r.Context(), fmt.Sprint(partitionNo))
 	pipe.Del(r.Context(), fmt.Sprintf("n%d", partitionNo))
+	pipe.Del(r.Context(), fmt.Sprintf("c%d", partitionNo))
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
 
 	_, err = pipe.Exec(r.Context())

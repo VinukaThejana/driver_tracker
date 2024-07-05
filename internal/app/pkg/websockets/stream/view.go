@@ -1,7 +1,10 @@
 package stream
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
@@ -9,6 +12,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
@@ -19,7 +23,10 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
 	}
-	val := c.R.DB.Get(r.Context(), bookingID).Val()
+
+	client := c.R.DB
+
+	val := client.Get(r.Context(), bookingID).Val()
 	if val == "" {
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
@@ -32,6 +39,29 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		return
 	}
 	partition := payload[0]
+	cKey := fmt.Sprintf("c%d", partition)
+
+	val = client.Get(r.Context(), cKey).Val()
+	if val == "" {
+		log.Warn().Msg("number of connections is not present in the redis db")
+		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
+		return
+	}
+	connections, err := strconv.Atoi(val)
+	if err != nil {
+		log.Error().Err(err).Msg("failed to convert the maximum connections to int")
+		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
+		return
+	}
+	if connections >= e.MaxConnections {
+		log.Warn().
+			Str("bookingID", bookingID).
+			Int("connections", connections).
+			Msg("maximum number of connections reached for the booking")
+		http.Error(w, errors.ErrBadRequest.Error(), http.StatusTooManyRequests)
+		return
+	}
+	client.Incr(r.Context(), cKey)
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
@@ -65,6 +95,24 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		}()
 
 		conn.OnClose(func(c *websocket.Conn, err error) {
+			go func() {
+				ctx := context.TODO()
+
+				val := client.Get(ctx, cKey).Val()
+				connections, err := strconv.Atoi(val)
+				if err != nil {
+					log.Error().Err(err).Msg("failed to convert the connections to int")
+					resetActiveConn(ctx, client, cKey)
+					return
+				}
+				if connections <= 0 {
+					resetActiveConn(ctx, client, cKey)
+					return
+				}
+
+				client.Decr(ctx, cKey)
+			}()
+
 			if err != nil {
 				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
 			} else {
@@ -78,4 +126,9 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		log.Error().Err(err).Msg("error occured while upgrading the websocket connection")
 		return
 	}
+}
+
+func resetActiveConn(ctx context.Context, client *redis.Client, key string) {
+	ttl := client.TTL(ctx, key).Val()
+	client.SetNX(ctx, key, 0, ttl)
 }
