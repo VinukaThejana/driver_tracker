@@ -18,5 +18,3 @@ We welcome contributions from the community! Feel free to open issues, submit pu
 ## License
 
 This project is licensed under the MIT License.
-
-Feel free to adjust the content as needed!
