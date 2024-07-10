@@ -92,23 +92,22 @@ func main() {
 		return
 	}
 
-	os.Remove(getPath("lat"))
-	os.Remove(getPath("lon"))
-	os.Remove(getPath("headings"))
+	os.Remove(getPath(bookingID))
+	os.Mkdir(getPath(bookingID), 0755)
 
-	latFile, err := os.Create(getPath("lat"))
+	latFile, err := os.Create(getPathWBookingID(bookingID, "lat"))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create the latitude file")
 		return
 	}
 	defer latFile.Close()
-	lonFile, err := os.Create(getPath("lon"))
+	lonFile, err := os.Create(getPathWBookingID(bookingID, "lon"))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create the longitude file")
 		return
 	}
 	defer lonFile.Close()
-	headingFile, err := os.Create(getPath("headings"))
+	headingFile, err := os.Create(getPathWBookingID(bookingID, "headings"))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create the headings file")
 		return
@@ -138,4 +137,8 @@ func main() {
 
 func getPath(fileName string) string {
 	return "tests/stream/data/" + fileName
+}
+
+func getPathWBookingID(bookingID, fileName string) string {
+	return getPath(bookingID) + "/" + fileName
 }
