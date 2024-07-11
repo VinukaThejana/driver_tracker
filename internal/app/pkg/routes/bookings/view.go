@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/enums"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
@@ -167,7 +168,11 @@ WHERE
 	data["pickups"] = pickups
 	data["dropoffs"] = dropoffs
 	if started {
-		data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.WebsocketURL, bookingID)
+		if e.Env == string(enums.Dev) {
+			data["stream"] = fmt.Sprintf("ws://%s/ws/stream/view/%s", e.WebsocketURL, bookingID)
+		} else {
+			data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.WebsocketURL, bookingID)
+		}
 	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, data)
