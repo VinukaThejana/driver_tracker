@@ -12,10 +12,10 @@ import (
 type EdgeConfigOperation string
 
 const (
-	// EDGE_CONFIG_CREATE is used to create a new key in the edge config
-	EDGE_CONFIG_CREATE EdgeConfigOperation = "create"
-	// EDGE_CONFIG_UPDATE is used to update a given key in the edge config
-	EDGE_CONFIG_UPDATE EdgeConfigOperation = "update"
+	// EdgeConfigCreate is used to create a new key in the edge config
+	EdgeConfigCreate EdgeConfigOperation = "create"
+	// EdgeConfigUpdate is used to update a given key in the edge config
+	EdgeConfigUpdate EdgeConfigOperation = "update"
 )
 
 // EdgeConfig is a struct that contains the configuration for the edge config
