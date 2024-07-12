@@ -50,6 +50,7 @@ type Env struct {
 	EdgeConfig          string `mapstructure:"EDGE_CONFIG" validate:"required"`
 	EdgeConfigReadToken string `mapstructure:"EDGECONFIG_READ_TOKEN" validate:"required"`
 	WebsocketURL        string `mapstructure:"WEBSOCKET_URL" validate:"required"`
+	DashboardURL        string `mapstructure:"DASHBOARD_URL" validate:"required"`
 	TotalPartitions     int    `mapstructure:"TOTAL_PARTITIONS" validate:"required"`
 	BookingTokenExpires int    `mapstructure:"BOOKING_TOKEN_EXPIRES_IN" validate:"required"`
 	DBPassword3         int    `mapstructure:"DB_PASSWORD_3" validate:"required"`
