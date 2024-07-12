@@ -15,6 +15,10 @@ func SaveBooking(e *env.Env, c *connections.C, payload []int, bookingID string) 
 	ctx := context.Background()
 	partition := payload[0]
 
+	Revalidate(e, []Paths{
+		Dashboard,
+	})
+
 	startOffset := int64(payload[1])
 	endOffset, err := c.GetLastOffset(ctx, e, e.Topic, partition)
 
