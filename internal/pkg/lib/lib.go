@@ -49,7 +49,7 @@ func JSONResponse(w http.ResponseWriter, statusCode int, message string) {
 }
 
 // JSONResponseWInterface is a function to send a JSON response with the given interface
-func JSONResponseWInterface(w http.ResponseWriter, statusCode int, res map[string]interface{}) {
+func JSONResponseWInterface(w http.ResponseWriter, statusCode int, res any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	sonic.ConfigDefault.NewEncoder(w).Encode(res)
