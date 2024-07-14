@@ -93,3 +93,12 @@ func GenerateToken(length int) string {
 	}
 	return hex.EncodeToString(b)
 }
+
+// Seperator is a function that is used to create an slice with the given string by spliting it by the given character
+func Seperator(str string, sep string) []string {
+	if strings.Contains(str, sep) {
+		return strings.Split(str, sep)
+	}
+
+	return []string{str}
+}
