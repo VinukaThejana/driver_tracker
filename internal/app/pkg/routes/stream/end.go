@@ -20,20 +20,28 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	id := r.Context().Value(middlewares.BookingTokenID).(string)
 	bookingID := r.Context().Value(middlewares.BookingID).(string)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
+	driverID := r.Context().Value(middlewares.DriverID).(int)
 
-	payload := make([]int, 2)
-	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &payload)
-	if err != nil {
-		log.Error().Err(err).Msg("failed to backup the job")
-		log.Warn().Interface("payload", payload)
+	client := c.R.DB
+
+	val := client.Get(r.Context(), fmt.Sprint(driverID)).Val()
+	if val != id {
+		lib.JSONResponse(w, http.StatusUnauthorized, errors.ErrUnauthorized.Error())
 		return
 	}
 
-	pipe := c.R.DB.Pipeline()
+	payload := make([]int, 3)
+	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &payload)
+	if err != nil {
+		log.Error().Err(err).Interface("payload", payload).Msg("failed to backup the job")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
 
-	pipe.Del(r.Context(), id)
+	pipe := client.Pipeline()
+
 	pipe.Del(r.Context(), bookingID)
-	pipe.Del(r.Context(), fmt.Sprint(partitionNo))
+	pipe.Del(r.Context(), fmt.Sprint(driverID))
 	pipe.Del(r.Context(), fmt.Sprintf("n%d", partitionNo))
 	pipe.Del(r.Context(), fmt.Sprintf("c%d", partitionNo))
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
@@ -54,5 +62,5 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	})
 	lib.JSONResponse(w, http.StatusOK, "ended the session")
 
-	go services.SaveBooking(e, c, payload, bookingID)
+	go services.GenerateLog(e, c, payload, bookingID)
 }

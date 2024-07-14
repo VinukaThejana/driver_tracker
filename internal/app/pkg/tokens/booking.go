@@ -59,11 +59,11 @@ func (bt *BookingToken) Create(
 	}
 
 	pipe := bt.C.R.DB.Pipeline()
-	pipe.SetNX(ctx, id.String(), true, duration)
-	pipe.SetNX(ctx, fmt.Sprint(partitionNo), id.String(), duration)
+	pipe.SetNX(ctx, fmt.Sprint(driverID), id.String(), duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
 	pipe.SetNX(ctx, fmt.Sprintf("c%d", partitionNo), 0, duration)
 	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), nPayload, duration+12*time.Hour)
+
 	_, err = pipe.Exec(ctx)
 	if err != nil {
 		return "", err
@@ -93,15 +93,25 @@ func (bt *BookingToken) Validate(
 		return false, nil
 	}
 
-	id, err := uuid.Parse(claims["sub"].(string))
+	sub, ok := claims["sub"].(string)
+	if !ok {
+		return false, nil
+	}
+
+	id, err := uuid.Parse(sub)
 	if err != nil {
+		return false, nil
+	}
+
+	driverID, ok := claims["driver_id"].(float64)
+	if !ok {
 		return false, nil
 	}
 
 	client := bt.C.R.DB
 
-	val := client.Get(ctx, id.String()).Val()
-	if val == "" {
+	val := client.Get(ctx, fmt.Sprint(int(driverID))).Val()
+	if val != id.String() {
 		return false, nil
 	}
 

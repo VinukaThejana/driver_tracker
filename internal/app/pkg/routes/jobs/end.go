@@ -28,7 +28,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusBadRequest, "provided booking id is not valid")
 		return
 	}
-	payload := make([]int, 2)
+	payload := make([]int, 3)
 	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
@@ -36,18 +36,12 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		return
 	}
 	partitionNo := payload[0]
-
-	driverTokenID := client.Get(r.Context(), fmt.Sprint(partitionNo)).Val()
-	if driverTokenID == "" {
-		lib.JSONResponse(w, http.StatusUnauthorized, errors.ErrUnauthorized.Error())
-		return
-	}
+	driverID := payload[2]
 
 	pipe := client.Pipeline()
 
 	pipe.Del(r.Context(), bookingID)
-	pipe.Del(r.Context(), driverTokenID)
-	pipe.Del(r.Context(), fmt.Sprint(partitionNo))
+	pipe.Del(r.Context(), fmt.Sprint(driverID))
 	pipe.Del(r.Context(), fmt.Sprintf("n%d", partitionNo))
 	pipe.Del(r.Context(), fmt.Sprintf("c%d", partitionNo))
 	pipe.SRem(r.Context(), e.PartitionManagerKey, partitionNo)
@@ -61,5 +55,5 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	lib.JSONResponse(w, http.StatusOK, "removed the current booking from redis")
 
-	go services.SaveBooking(e, c, payload, bookingID)
+	go services.GenerateLog(e, c, payload, bookingID)
 }

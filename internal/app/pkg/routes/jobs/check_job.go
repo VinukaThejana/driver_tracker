@@ -92,7 +92,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 					Msg("failed to delete the key in redis")
 			}
 
-			go services.SaveBooking(e, c, []int{partition, startOffset}, payload[0])
+			go services.GenerateLog(e, c, []int{partition, startOffset}, payload[0])
 		}(job)
 	}
 

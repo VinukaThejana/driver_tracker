@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"database/sql"
 	ers "errors"
 	"fmt"
 	"net/http"
@@ -50,14 +51,15 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 
 	client := c.R.DB
+	driverID := r.Context().Value(middlewares.DriverID).(int)
 
 	if val := client.Get(r.Context(), reqBody.BookingID).Val(); val != "" {
+		isDriver(c, driverID, reqBody.BookingID)
 		lib.JSONResponse(w, http.StatusConflict, "booking id that you provided is already processing, please use another booking id")
 		return
 	}
 
 	var available []int
-	driverID := r.Context().Value(middlewares.DriverID).(int)
 
 	ctx, cancel := context.WithTimeout(r.Context(), timeout)
 	defer cancel()
@@ -126,7 +128,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 	newOffset := int(lastOffset) + 1
 
-	payload, err := sonic.MarshalString([]int{partition, newOffset})
+	payload, err := sonic.MarshalString([]int{partition, newOffset, driverID})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the interface")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
@@ -162,4 +164,19 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
 		"booking_token": token,
 	})
+}
+
+func isDriver(c *connections.C, driverID int, bookingID string) (isDriverOwned bool, err error) {
+	var pk *int
+	query := "SELECT DriverPk FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
+
+	err = c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(&pk)
+	if err != nil {
+		return false, err
+	}
+	if pk == nil {
+		return false, fmt.Errorf("failed to get the primary key of the driver")
+	}
+
+	return false, nil
 }
