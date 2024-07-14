@@ -18,6 +18,38 @@ type BookingToken struct {
 	E *env.Env
 }
 
+// Createtoken is a function that is used to only create the booking token without manipulating the redis state
+func (bt *BookingToken) Createtoken(
+	driverID,
+	partitionNo int,
+	bookingID string,
+	duration time.Duration,
+) (id uuid.UUID, token string, err error) {
+	now := time.Now().UTC()
+
+	id, err = uuid.NewUUID()
+	if err != nil {
+		return uuid.UUID{}, "", err
+	}
+
+	claims := make(jwt.MapClaims)
+
+	claims["sub"] = id.String()
+	claims["exp"] = now.Add(duration).Unix()
+	claims["iat"] = now.Unix()
+	claims["nbf"] = now.Unix()
+	claims["driver_id"] = driverID
+	claims["booking_id"] = bookingID
+	claims["partition_no"] = partitionNo
+
+	token, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(bt.E.BookingTokenSecret))
+	if err != nil {
+		return uuid.UUID{}, "", err
+	}
+
+	return id, token, nil
+}
+
 // Create is a function that is used to create the booking token
 func (bt *BookingToken) Create(
 	ctx context.Context,
@@ -27,13 +59,6 @@ func (bt *BookingToken) Create(
 	newOffset int,
 	payload string,
 ) (token string, err error) {
-	now := time.Now().UTC()
-
-	id, err := uuid.NewUUID()
-	if err != nil {
-		return "", err
-	}
-
 	duration, err := time.ParseDuration(fmt.Sprintf("%ds", bt.E.BookingTokenExpires))
 	if err != nil {
 		return "", err
@@ -44,16 +69,7 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
-	claims := make(jwt.MapClaims)
-	claims["sub"] = id.String()
-	claims["exp"] = now.Add(duration).Unix()
-	claims["iat"] = now.Unix()
-	claims["nbf"] = now.Unix()
-	claims["driver_id"] = driverID
-	claims["booking_id"] = bookingID
-	claims["partition_no"] = partitionNo
-
-	token, err = jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(bt.E.BookingTokenSecret))
+	id, token, err := bt.Createtoken(driverID, partitionNo, bookingID, duration)
 	if err != nil {
 		return "", err
 	}
