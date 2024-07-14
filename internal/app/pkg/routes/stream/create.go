@@ -52,10 +52,35 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 
 	client := c.R.DB
 	driverID := r.Context().Value(middlewares.DriverID).(int)
+	ErrBookingAlreadyProcessing := fmt.Errorf("booking id that you provided is already processing, please use another booking id")
 
 	if val := client.Get(r.Context(), reqBody.BookingID).Val(); val != "" {
-		isDriver(c, driverID, reqBody.BookingID)
-		lib.JSONResponse(w, http.StatusConflict, "booking id that you provided is already processing, please use another booking id")
+		isDriver, err := isDriver(c, driverID, reqBody.BookingID)
+		if err != nil || !isDriver {
+			log.Error().Err(err).Msg("failed to validate wether the driver owns the booking id")
+			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
+			return
+		}
+
+		token, ttl, err := generate(r.Context(), e, c, driverID, reqBody.BookingID)
+		if err != nil {
+			log.Error().Err(err).Msg("failed to renew the booking token")
+			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
+			return
+		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:     "booking_token",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   e.BookingTokenExpires,
+			Expires:  time.Now().UTC().Add(ttl).UTC(),
+		})
+
+		lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
+			"booking_token": token,
+		})
 		return
 	}
 
@@ -120,6 +145,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 
 	partition := available[0]
+
 	lastOffset, err := c.GetLastOffset(r.Context(), e, e.Topic, partition)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get the lastoffset")
@@ -166,7 +192,11 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	})
 }
 
-func isDriver(c *connections.C, driverID int, bookingID string) (isDriverOwned bool, err error) {
+func isDriver(
+	c *connections.C,
+	driverID int,
+	bookingID string,
+) (isDriverOwned bool, err error) {
 	var pk *int
 	query := "SELECT DriverPk FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
 
@@ -178,5 +208,53 @@ func isDriver(c *connections.C, driverID int, bookingID string) (isDriverOwned b
 		return false, fmt.Errorf("failed to get the primary key of the driver")
 	}
 
-	return false, nil
+	if *pk != driverID {
+		return false, fmt.Errorf("the booking id does not belong to the driver")
+	}
+
+	return true, nil
+}
+
+func generate(
+	ctx context.Context,
+	e *env.Env,
+	c *connections.C,
+	driverID int,
+	bookingID string,
+) (token string, ttl time.Duration, err error) {
+	client := c.R.DB
+
+	val := client.Get(ctx, fmt.Sprint(driverID)).Val()
+	if val == "" {
+		return "", 0, fmt.Errorf("the driver id in the redis database returned an empty value")
+	}
+	ttl = client.TTL(ctx, fmt.Sprint(driverID)).Val()
+	if ttl <= 0 {
+		return "", 0, fmt.Errorf("the ttl the previous booking token is smaller than 0")
+	}
+
+	payload := make([]int, 3)
+	err = sonic.UnmarshalString(client.Get(ctx, bookingID).Val(), &payload)
+	if err != nil {
+		return "", 0, err
+	}
+	partition := payload[0]
+
+	bt := tokens.BookingToken{
+		E: e,
+		C: c,
+	}
+
+	id, token, err := bt.Createtoken(
+		driverID,
+		partition,
+		bookingID,
+		ttl,
+	)
+	if err != nil {
+		return "", 0, err
+	}
+	client.Set(ctx, fmt.Sprint(driverID), id.String(), ttl)
+
+	return token, 0, nil
 }
