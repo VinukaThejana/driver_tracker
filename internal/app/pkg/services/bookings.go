@@ -10,8 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// SaveBooking is a function that is used to save the booking history of a particular booking
-func SaveBooking(e *env.Env, c *connections.C, payload []int, bookingID string) {
+// GenerateLog is a function that is used to save the booking history of a particular booking
+func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) {
 	ctx := context.Background()
 	partition := payload[0]
 
