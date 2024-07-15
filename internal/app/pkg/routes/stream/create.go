@@ -161,10 +161,8 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
-	bt := tokens.BookingToken{
-		C: c,
-		E: e,
-	}
+	bt := tokens.NewBookingToken(e, c)
+
 	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition, newOffset, payload)
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
@@ -240,10 +238,7 @@ func generate(
 	}
 	partition := payload[0]
 
-	bt := tokens.BookingToken{
-		E: e,
-		C: c,
-	}
+	bt := tokens.NewBookingToken(e, c)
 
 	id, token, err := bt.Createtoken(
 		driverID,

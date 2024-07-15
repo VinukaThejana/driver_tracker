@@ -66,10 +66,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 			return
 		}
 
-		dt := tokens.DriverToken{
-			E: e,
-			C: c,
-		}
+		dt := tokens.NewDriverToken(e, c)
 
 		isValid, token := dt.Validate(driverToken)
 		if !isValid {
@@ -111,10 +108,8 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 			return
 		}
 
-		bt := tokens.BookingToken{
-			C: c,
-			E: e,
-		}
+		bt := tokens.NewBookingToken(e, c)
+
 		isValid, token := bt.Validate(r.Context(), bookingToken)
 		if !isValid {
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
@@ -217,10 +212,7 @@ func getAdmin(r *http.Request, e *env.Env, c *connections.C) (adminID int, err e
 		adminToken = adminTokenC.Value
 	}
 
-	at := tokens.AdminToken{
-		E: e,
-		C: c,
-	}
+	at := tokens.NewAdminToken(e, c)
 
 	isValid, token := at.Validate(adminToken)
 	if !isValid {
