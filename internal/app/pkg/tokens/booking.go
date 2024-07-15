@@ -18,6 +18,14 @@ type BookingToken struct {
 	E *env.Env
 }
 
+// NewBookingToken is a function that is used to create a new booking token instance
+func NewBookingToken(e *env.Env, c *connections.C) *BookingToken {
+	return &BookingToken{
+		C: c,
+		E: e,
+	}
+}
+
 // Createtoken is a function that is used to only create the booking token without manipulating the redis state
 func (bt *BookingToken) Createtoken(
 	driverID,

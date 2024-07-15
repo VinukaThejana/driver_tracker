@@ -15,6 +15,14 @@ type AdminToken struct {
 	E *env.Env
 }
 
+// NewAdminToken is a function that is used to create a new admin token instance
+func NewAdminToken(e *env.Env, c *connections.C) *AdminToken {
+	return &AdminToken{
+		E: e,
+		C: c,
+	}
+}
+
 // Validate is a function that is used to validate the admin token
 func (at *AdminToken) Validate(str string) (isValid bool, token *jwt.Token) {
 	token, err := jwt.Parse(str, func(t *jwt.Token) (interface{}, error) {

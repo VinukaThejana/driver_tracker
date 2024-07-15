@@ -15,6 +15,14 @@ type DriverToken struct {
 	E *env.Env
 }
 
+// NewDriverToken is a function that is used to create a new driver token instance
+func NewDriverToken(e *env.Env, c *connections.C) *DriverToken {
+	return &DriverToken{
+		E: e,
+		C: c,
+	}
+}
+
 // Validate is a function that is used to validate the driver token
 func (dt *DriverToken) Validate(str string) (isValid bool, token *jwt.Token) {
 	token, err := jwt.Parse(str, func(t *jwt.Token) (interface{}, error) {
