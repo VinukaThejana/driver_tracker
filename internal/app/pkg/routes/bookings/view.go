@@ -1,13 +1,12 @@
 package bookings
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/enums"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -15,7 +14,6 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
-	"googlemaps.github.io/maps"
 )
 
 // TODO: remove the usage of the google geocode API and replace it with the proper latitude and longitude cordinates
@@ -54,7 +52,8 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	}
 	var payload bookingDetails
 
-	query := `SELECT
+	query := `
+SELECT
 	bookings.BookRefNo,
 	bookings.BookPassengerNm,
 	bookings.BookingContact,
@@ -70,7 +69,8 @@ FROM
 	Tbl_BookingDetails bookings
 	INNER JOIN Tbl_VehicleDetails vehicles ON bookings.VehicleId = vehicles.VehicleId
 WHERE
-	bookings.BookRefNo = @BookRefNo`
+	bookings.BookRefNo = @BookRefNo
+`
 
 	err := c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(
 		&payload.BookRefNo,
@@ -95,8 +95,6 @@ WHERE
 		lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
 		return
 	}
-
-	c.InitMap(e)
 
 	BookPassengerNm := ""
 	BookingContact := ""
@@ -132,27 +130,14 @@ WHERE
 		VehicleColor = *payload.VehicleColor
 	}
 
-	pickups := []geo{}
+	pickups := []services.Geo{}
 	if payload.BookPickUpAddr != nil {
-		payload, err := geocode(r.Context(), c, seperator(*payload.BookPickUpAddr))
-		if err != nil {
-			log.Error().Err(err).Msg("failed to geocode the pickup address")
-			lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
-			return
-		}
-		pickups = append(pickups, payload...)
+		pickups = append(pickups, services.Geocode(r.Context(), e, c, true, lib.Seperator(*payload.BookPickUpAddr, "|"))...)
 	}
 
-	dropoffs := []geo{}
+	dropoffs := []services.Geo{}
 	if payload.BookDropAddr != nil {
-		payload, err := geocode(r.Context(), c, seperator(*payload.BookDropAddr))
-		if err != nil {
-			log.Error().Err(err).Msg("failed to geocode the drop address")
-			lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
-			return
-		}
-
-		dropoffs = append(dropoffs, payload...)
+		dropoffs = append(dropoffs, services.Geocode(r.Context(), e, c, true, lib.Seperator(*payload.BookDropAddr, "|"))...)
 	}
 
 	data := map[string]any{}
@@ -176,35 +161,4 @@ WHERE
 	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, data)
-}
-
-func seperator(str string) []string {
-	if strings.Contains(str, "|") {
-		return strings.Split(str, "|")
-	}
-
-	return []string{str}
-}
-
-func geocode(ctx context.Context, c *connections.C, data []string) ([]geo, error) {
-	pickups := []geo{}
-
-	for _, pickup := range data {
-		route, err := c.M.Geocode(ctx, &maps.GeocodingRequest{
-			Address: pickup,
-		})
-		if err != nil {
-			return []geo{}, err
-		}
-		if len(route) == 0 {
-			continue
-		}
-
-		pickups = append(pickups, geo{
-			Lat: route[0].Geometry.Location.Lat,
-			Lon: route[0].Geometry.Location.Lng,
-		})
-	}
-
-	return pickups, nil
 }

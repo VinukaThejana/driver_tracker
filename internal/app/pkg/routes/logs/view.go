@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
@@ -16,9 +17,11 @@ import (
 )
 
 type bookingDetails struct {
-	DriverName   *string
-	VehicleModal *string
-	VehicleRegNo *string
+	DriverName     *string
+	VehicleModal   *string
+	VehicleRegNo   *string
+	BookPickUpAddr *string
+	BookDropAddr   *string
 }
 
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
@@ -65,9 +68,28 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		return
 	}
 
-	var bookingDetails bookingDetails
-	query := "SELECT DriverName, VehicleModal, VehicleRegNo FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
-	err = c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(&bookingDetails.DriverName, &bookingDetails.VehicleModal, &bookingDetails.VehicleRegNo)
+	var bd bookingDetails
+
+	query := `
+SELECT
+	DriverName,
+	VehicleModal,
+	VehicleRegNo,
+	BookPickUpAddr,
+	BookDropAddr
+FROM
+	Tbl_BookingDetails
+WHERE
+  BookRefNo = @BookRefNo
+`
+
+	err = c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(
+		&bd.DriverName,
+		&bd.VehicleModal,
+		&bd.VehicleRegNo,
+		&bd.BookPickUpAddr,
+		&bd.BookDropAddr,
+	)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Error().Err(err).Msg("failed to get the query from the database")
@@ -79,14 +101,24 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	VehicleModal := ""
 	VehicleRegNo := ""
 
-	if bookingDetails.DriverName != nil {
-		DriverName = *bookingDetails.DriverName
+	if bd.DriverName != nil {
+		DriverName = *bd.DriverName
 	}
-	if bookingDetails.VehicleModal != nil {
-		VehicleModal = *bookingDetails.VehicleModal
+	if bd.VehicleModal != nil {
+		VehicleModal = *bd.VehicleModal
 	}
-	if bookingDetails.VehicleRegNo != nil {
-		VehicleRegNo = *bookingDetails.VehicleRegNo
+	if bd.VehicleRegNo != nil {
+		VehicleRegNo = *bd.VehicleRegNo
+	}
+
+	pickups := []services.Geo{}
+	if bd.BookPickUpAddr != nil {
+		pickups = append(pickups, services.Geocode(r.Context(), e, c, true, lib.Seperator(*bd.BookPickUpAddr, "|"))...)
+	}
+
+	dropoffs := []services.Geo{}
+	if bd.BookDropAddr != nil {
+		dropoffs = append(dropoffs, services.Geocode(r.Context(), e, c, true, lib.Seperator(*bd.BookDropAddr, "|"))...)
 	}
 
 	lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
@@ -94,5 +126,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		"vehicle_modal":           VehicleModal,
 		"vehicle_registration_no": VehicleRegNo,
 		"cordinates":              payload,
+		"pickups":                 pickups,
+		"dropoffs":                dropoffs,
 	})
 }
