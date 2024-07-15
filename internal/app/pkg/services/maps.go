@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"googlemaps.github.io/maps"
 )
 
@@ -14,7 +15,17 @@ type Geo struct {
 }
 
 // Geocode convert the string paths to lat-lon paths
-func Geocode(ctx context.Context, c *connections.C, paths []string) ([]Geo, error) {
+func Geocode(
+	ctx context.Context,
+	e *env.Env,
+	c *connections.C,
+	init bool,
+	paths []string,
+) []Geo {
+	if init {
+		c.InitMap(e)
+	}
+
 	payload := []Geo{}
 
 	for _, path := range paths {
@@ -22,7 +33,7 @@ func Geocode(ctx context.Context, c *connections.C, paths []string) ([]Geo, erro
 			Address: path,
 		})
 		if err != nil {
-			return []Geo{}, err
+			return []Geo{}
 		}
 		if len(route) == 0 {
 			continue
@@ -34,5 +45,5 @@ func Geocode(ctx context.Context, c *connections.C, paths []string) ([]Geo, erro
 		})
 	}
 
-	return payload, nil
+	return payload
 }
