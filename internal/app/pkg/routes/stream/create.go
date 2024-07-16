@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -50,19 +49,36 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 		return
 	}
 
+	var driverID *int
+
+	query := `
+SELECT
+	DriverPk
+FROM
+	Tbl_BookingDetails
+WHERE
+	BookRefNo = @BookRefNo;
+`
+
+	err := c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID)
+	if err != nil || driverID == nil {
+		log.Error().Err(err).Str("booking_id", reqBody.BookingID).Msg("failed to get the driver ID from the booking ID")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
+
 	client := c.R.DB
-	driverID := r.Context().Value(middlewares.DriverID).(int)
 	ErrBookingAlreadyProcessing := fmt.Errorf("booking id that you provided is already processing, please use another booking id")
 
 	if val := client.Get(r.Context(), reqBody.BookingID).Val(); val != "" {
-		isDriver, err := isDriver(c, driverID, reqBody.BookingID)
+		isDriver, err := isDriver(c, *driverID, reqBody.BookingID)
 		if err != nil || !isDriver {
 			log.Error().Err(err).Msg("failed to validate wether the driver owns the booking id")
 			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
 			return
 		}
 
-		token, ttl, err := generate(r.Context(), e, c, driverID, reqBody.BookingID)
+		token, ttl, err := generate(r.Context(), e, c, *driverID, reqBody.BookingID)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to renew the booking token")
 			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
@@ -91,7 +107,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 
 	serverBusyErr := fmt.Errorf("server is busy right now, no partitions are currently available")
 
-	err := func() error {
+	err = func() error {
 		acquired, err := c.R.AcquireLock(ctx, client, e.PartitionManagerKey, lockDuration, 100*time.Millisecond)
 		if err != nil {
 			return err
@@ -154,7 +170,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 	newOffset := int(lastOffset) + 1
 
-	payload, err := sonic.MarshalString([]int{partition, newOffset, driverID})
+	payload, err := sonic.MarshalString([]int{partition, newOffset, *driverID})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the interface")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
@@ -163,7 +179,7 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 
 	bt := tokens.NewBookingToken(e, c)
 
-	token, err := bt.Create(r.Context(), driverID, reqBody.BookingID, partition, newOffset, payload)
+	token, err := bt.Create(r.Context(), *driverID, reqBody.BookingID, partition, newOffset, payload)
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
