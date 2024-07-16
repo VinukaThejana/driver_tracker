@@ -17,9 +17,11 @@ import (
 )
 
 type req struct {
-	Heading *float64 `json:"heading"`
-	Lat     float64  `json:"lat" validate:"required,latitude"`
-	Lon     float64  `json:"lon" validate:"required,longitude"`
+	Accuracy      *float64 `json:"accuracy"`
+	SpeedAccuracy *float64 `json:"speed_accuracy"`
+	Heading       *float64 `json:"heading"`
+	Lat           float64  `json:"lat" validate:"required,latitude"`
+	Lon           float64  `json:"lon" validate:"required,longitude"`
 }
 
 // add is a route that is used to add data to the stream
@@ -58,9 +60,22 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			}
 			return *data.Heading
 		}(),
+		"accuracy": func() float64 {
+			if data.Accuracy == nil {
+				return -1
+			}
+			return *data.Accuracy
+		}(),
+		"speed_accuracy": func() float64 {
+			if data.SpeedAccuracy == nil {
+				return -1
+			}
+			return *data.SpeedAccuracy
+		}(),
 		"timestamp": time.Now().UTC().Unix(),
 	})
 	if err != nil {
+		log.Error().Err(err).Msg("failed to marshal the payload")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
