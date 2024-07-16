@@ -24,7 +24,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 		go func(job string) {
 			defer wg.Done()
 
-			val := client.Get(r.Context(), job).Val()
+			val := client.Get(r.Context(), "c"+job).Val()
 			if val != "" {
 				return
 			}
