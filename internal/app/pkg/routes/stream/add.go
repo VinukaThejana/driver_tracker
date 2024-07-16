@@ -89,6 +89,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		Key:   []byte(strconv.Itoa(int(driverID))),
 		Value: []byte(payload),
 	})
+	log.Info().Int("partition", partitionNo).Int("driver_id", driverID).Msg("recorded the location ... ")
 
 	lib.JSONResponse(w, http.StatusOK, "added the message to the topic")
 }
