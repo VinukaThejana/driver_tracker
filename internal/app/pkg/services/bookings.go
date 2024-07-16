@@ -7,6 +7,7 @@ import (
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
@@ -22,16 +23,18 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 	startOffset := int64(payload[1])
 	endOffset, err := c.GetLastOffset(ctx, e, e.Topic, partition)
 
+	free(ctx, c.R.DB, e.PartitionManagerKey, partition)
+
 	if startOffset >= endOffset {
 		log.Warn().Msg("no messages in the given partition")
 		return
 	}
-
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get the last offset")
 		log.Warn().Interface("payload", payload)
 		return
 	}
+
 	defer func() {
 		log.Warn().Int("start", int(startOffset)).Int("end", int(endOffset))
 	}()
@@ -63,5 +66,13 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 	if err != nil {
 		log.Error().Err(err).Msg("failed to write the messages to the google cloud storage")
 		return
+	}
+}
+
+// deallocate the used partition for upcomming jobs
+func free(ctx context.Context, client *redis.Client, key string, partition int) {
+	err := client.SRem(ctx, key, partition).Err()
+	if err != nil {
+		log.Error().Err(err).Int("partition", partition).Msg("failed to remove the partition")
 	}
 }
