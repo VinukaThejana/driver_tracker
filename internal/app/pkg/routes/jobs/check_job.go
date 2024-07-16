@@ -78,12 +78,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 				return
 			}
 
-			pipe := client.Pipeline()
-
-			pipe.SRem(r.Context(), e.PartitionManagerKey, job)
-			pipe.Del(r.Context(), "n"+job)
-
-			_, err = pipe.Exec(r.Context())
+			err = client.Del(r.Context(), "n"+job).Err()
 			if err != nil {
 				log.Error().
 					Err(err).
