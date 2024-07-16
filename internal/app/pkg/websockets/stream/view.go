@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
@@ -73,14 +74,24 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		done := make(chan struct{})
 
 		go func() {
+			ticker := time.NewTicker(5 * time.Second)
 			reader := c.KafkaReader(e, e.Topic, partition, kafka.LastOffset)
-			defer reader.Close()
-			defer close(done)
+
+			defer func() {
+				reader.Close()
+				close(done)
+				ticker.Stop()
+			}()
 
 			for {
 				select {
 				case <-done:
 					return
+				case <-ticker.C:
+					log.Info().Msg("heartbeat ... ")
+					if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+						log.Error().Err(err).Msg("failed to send the heartbeat")
+					}
 				default:
 					message, _ := reader.ReadMessage(r.Context())
 					if len(message.Value) == 0 {
