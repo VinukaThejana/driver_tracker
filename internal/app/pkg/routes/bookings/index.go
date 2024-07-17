@@ -31,7 +31,7 @@ func index(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C)
 	}
 
 	for _, job := range jobs {
-		val := client.Get(r.Context(), job).Val()
+		val := client.Get(r.Context(), "c"+job).Val()
 		if val == "" {
 			bookingID = getBookingID(r.Context(), e, client, job)
 			if bookingID == "" {
