@@ -3,12 +3,23 @@ package stream
 
 import (
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+)
+
+const (
+	// updateinterval is the update frequency of redis
+	updateinterval = 5
+	// heartbeat is the frequency to send a ping to the websocket client
+	heartbeat = 5 * time.Second
+	// pending is the deadline to keep wating for the kafka reader
+	pending = 2 * time.Second
 )
 
 var v = validator.New()
@@ -30,4 +41,10 @@ func WebSocket(e *env.Env, c *connections.C) http.Handler {
 	})
 
 	return r
+}
+
+// isClosed is used to check wether the websocket connection is closed in a concurrent
+// safe manner
+func isClosed(closed *int32) bool {
+	return atomic.LoadInt32(closed) == 1
 }

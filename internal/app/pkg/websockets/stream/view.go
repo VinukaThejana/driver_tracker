@@ -20,11 +20,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-const (
-	heartbeat = 5 * time.Second
-	pending   = 2 * time.Second
-)
-
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	bookingID := chi.URLParam(r, "booking_id")
 	if bookingID == "" {
@@ -181,10 +176,6 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		log.Error().Err(err).Msg("error occured while upgrading the websocket connection")
 		return
 	}
-}
-
-func isClosed(closed *int32) bool {
-	return atomic.LoadInt32(closed) == 1
 }
 
 func resetActiveConn(

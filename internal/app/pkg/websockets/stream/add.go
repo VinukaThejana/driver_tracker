@@ -2,8 +2,10 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
@@ -11,6 +13,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/lesismal/nbio/nbhttp/websocket"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
@@ -26,6 +29,13 @@ type req struct {
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
+	count := 1
+
+	writer := c.K.B
+	writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
+		return partitionNo
+	})
+	writer.Async = true
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
@@ -48,49 +58,50 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			return
 		}
 
-		if payload, err = sonic.MarshalString(map[string]interface{}{
-			"lat": data.Lat,
-			"lon": data.Lon,
-			"heading": func() float64 {
-				if data.Heading == nil {
-					return 0
-				}
-
-				return *data.Heading
-			}(),
-			"accuracy": func() float64 {
-				if data.Accuracy == nil {
-					return -1
-				}
-				return *data.Accuracy
-			}(),
-			"speed_accuracy": func() float64 {
-				if data.SpeedAccuracy == nil {
-					return -1
-				}
-
-				return *data.Accuracy
-			}(),
-			"timestamp": time.Now().UTC().Unix(),
-		}); err != nil {
-			log.Error().Err(err).Msg("failed to marshal data")
+		payload, err = sonic.MarshalString(blob(data))
+		if err != nil {
+			log.Error().Err(err).Interface("data", data).Int("partition", partitionNo).Int("driver_id", driverID).Msg("failed to marshal the payload")
 			return
 		}
 
-		go func() {
-			writer := c.K.B
-			writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
-				return partitionNo
-			})
-			writer.WriteMessages(context.Background(), kafka.Message{
-				Key:   []byte(strconv.Itoa(int(driverID))),
-				Value: []byte(payload),
-			})
-		}()
+		writer.WriteMessages(context.Background(), kafka.Message{
+			Key:   []byte(strconv.Itoa(int(driverID))),
+			Value: []byte(payload),
+		})
+
+		if count < updateinterval {
+			count++
+		} else {
+			c.R.DB.Set(r.Context(), fmt.Sprintf("l%d", partitionNo), payload, redis.KeepTTL)
+			count = 1
+		}
 	})
-	upgrader.OnOpen(func(c *websocket.Conn) {
-		log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection opened")
-		c.OnClose(func(c *websocket.Conn, err error) {
+	upgrader.OnOpen(func(conn *websocket.Conn) {
+		log.Info().Str("addr", conn.RemoteAddr().String()).Msg("connection opened")
+		done := make(chan struct{})
+		closed := int32(0)
+
+		go func() {
+			ticker := time.NewTicker(heartbeat)
+			defer ticker.Stop()
+
+			for {
+				select {
+				case <-done:
+					return
+				case <-ticker.C:
+					if isClosed(&closed) {
+						return
+					}
+					conn.WriteMessage(websocket.PingMessage, nil)
+				}
+			}
+		}()
+
+		conn.OnClose(func(c *websocket.Conn, err error) {
+			close(done)
+			atomic.StoreInt32(&closed, 1)
+
 			if err != nil {
 				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
 			} else {
@@ -103,5 +114,32 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	if err != nil {
 		log.Error().Err(err).Msg("error occured while upgrading the websocket connection")
 		return
+	}
+}
+
+func blob(
+	payload req,
+) map[string]any {
+	return map[string]any{
+		"lat": payload.Lat,
+		"lon": payload.Lon,
+		"heading": func() float64 {
+			if payload.Heading == nil {
+				return 0
+			}
+			return *payload.Heading
+		}(),
+		"accuracy": func() float64 {
+			if payload.Accuracy == nil {
+				return -1
+			}
+			return *payload.Accuracy
+		}(),
+		"speed_accuracy": func() float64 {
+			if payload.SpeedAccuracy == nil {
+				return -1
+			}
+			return *payload.SpeedAccuracy
+		}(),
 	}
 }
