@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 	"github.com/segmentio/kafka-go"
 )
@@ -51,34 +53,21 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	payload, err = sonic.MarshalString(map[string]interface{}{
-		"lat": data.Lat,
-		"lon": data.Lon,
-		"heading": func() float64 {
-			if data.Heading == nil {
-				return 0
-			}
-			return *data.Heading
-		}(),
-		"accuracy": func() float64 {
-			if data.Accuracy == nil {
-				return -1
-			}
-			return *data.Accuracy
-		}(),
-		"speed_accuracy": func() float64 {
-			if data.SpeedAccuracy == nil {
-				return -1
-			}
-			return *data.SpeedAccuracy
-		}(),
-		"timestamp": time.Now().UTC().Unix(),
-	})
+	blob := blob(data)
+
+	payload, err = sonic.MarshalString(blob)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the payload")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
+
+	go func(payload string) {
+		err = c.R.DB.Set(r.Context(), fmt.Sprintf("l%d", partitionNo), payload, redis.KeepTTL).Err()
+		if err != nil {
+			log.Error().Err(err).Str("payload", payload).Msg("failed to set the live location")
+		}
+	}(payload)
 
 	writer := c.K.B
 	writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
@@ -89,7 +78,33 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		Key:   []byte(strconv.Itoa(int(driverID))),
 		Value: []byte(payload),
 	})
-	log.Info().Int("partition", partitionNo).Int("driver_id", driverID).Msg("recorded the location ... ")
 
-	lib.JSONResponse(w, http.StatusOK, "added the message to the topic")
+	log.Info().Int("partition", partitionNo).Int("driver_id", driverID).Msg("recorded the location ... ")
+	lib.JSONResponse(w, http.StatusOK, "added")
+}
+
+func blob(payload req) map[string]any {
+	return map[string]any{
+		"lat": payload.Lat,
+		"lon": payload.Lon,
+		"heading": func() float64 {
+			if payload.Heading == nil {
+				return 0
+			}
+			return *payload.Heading
+		}(),
+		"accuracy": func() float64 {
+			if payload.Accuracy == nil {
+				return -1
+			}
+			return *payload.Accuracy
+		}(),
+		"speed_accuracy": func() float64 {
+			if payload.SpeedAccuracy == nil {
+				return -1
+			}
+			return *payload.SpeedAccuracy
+		}(),
+		"timestamp": time.Now().UTC().Unix(),
+	}
 }
