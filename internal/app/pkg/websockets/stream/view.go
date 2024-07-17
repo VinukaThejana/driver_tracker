@@ -187,7 +187,11 @@ func isClosed(closed *int32) bool {
 	return atomic.LoadInt32(closed) == 1
 }
 
-func resetActiveConn(ctx context.Context, client *redis.Client, key string) {
+func resetActiveConn(
+	ctx context.Context,
+	client *redis.Client,
+	key string,
+) {
 	ttl := client.TTL(ctx, key).Val()
 	client.SetNX(ctx, key, 0, ttl)
 }
