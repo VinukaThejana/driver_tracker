@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/golang-jwt/jwt/v5"
@@ -66,6 +67,7 @@ func (bt *BookingToken) Create(
 	partitionNo int,
 	newOffset int,
 	payload string,
+	pickup services.Geo,
 ) (token string, err error) {
 	duration, err := time.ParseDuration(fmt.Sprintf("%ds", bt.E.BookingTokenExpires))
 	if err != nil {
@@ -82,9 +84,22 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
+	pickupStr, err := sonic.MarshalString(map[string]any{
+		"lat":            pickup.Lat,
+		"lon":            pickup.Lon,
+		"heading":        0,
+		"accuracy":       -1,
+		"speed_accuracy": -1,
+		"timestamp":      time.Now().UTC().Unix(),
+	})
+	if err != nil {
+		return "", err
+	}
+
 	pipe := bt.C.R.DB.Pipeline()
 	pipe.SetNX(ctx, fmt.Sprint(driverID), id.String(), duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
+	pipe.SetNX(ctx, fmt.Sprintf("l%d", partitionNo), pickupStr, duration)
 	pipe.SetNX(ctx, fmt.Sprintf("c%d", partitionNo), 0, duration)
 	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), nPayload, duration+12*time.Hour)
 

@@ -2,15 +2,17 @@ package stream
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/redis/go-redis/v9"
@@ -36,7 +38,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
-		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	partition := payload[0]
@@ -45,13 +47,13 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	val = client.Get(r.Context(), cKey).Val()
 	if val == "" {
 		log.Warn().Msg("number of connections is not present in the redis db")
-		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	connections, err := strconv.Atoi(val)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to convert the maximum connections to int")
-		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	if connections >= e.MaxConnections {
@@ -59,27 +61,39 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 			Str("bookingID", bookingID).
 			Int("connections", connections).
 			Msg("maximum number of connections reached for the booking")
-		http.Error(w, errors.ErrBadRequest.Error(), http.StatusTooManyRequests)
+		http.Error(w, errs.ErrBadRequest.Error(), http.StatusTooManyRequests)
 		return
 	}
 	client.Incr(r.Context(), cKey)
+
+	location := client.Get(r.Context(), fmt.Sprintf("l%d", partition)).Val()
+	if location == "" {
+		log.Error().Msg("failed to get the last location from redis")
+		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	upgrader := websocket.NewUpgrader()
 	upgrader.CheckOrigin = func(r *http.Request) bool {
 		return true
 	}
 
+	var (
+		ctx    context.Context
+		cancel context.CancelFunc
+	)
+
 	upgrader.OnOpen(func(conn *websocket.Conn) {
 		log.Info().Str("addr", conn.RemoteAddr().String()).Msg("connection opened")
 		done := make(chan struct{})
+		closed := int32(0)
 
 		go func() {
-			ticker := time.NewTicker(5 * time.Second)
+			ticker := time.NewTicker(heartbeat)
 			reader := c.KafkaReader(e, e.Topic, partition, kafka.LastOffset)
 
 			defer func() {
 				reader.Close()
-				close(done)
 				ticker.Stop()
 			}()
 
@@ -88,24 +102,49 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 				case <-done:
 					return
 				case <-ticker.C:
-					log.Info().Msg("heartbeat ... ")
-					if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-						log.Error().Err(err).Msg("failed to send the heartbeat")
+					if isClosed(&closed) {
+						return
 					}
+
+					log.Info().Msg("heartbeat ... ")
+					conn.WriteMessage(websocket.PingMessage, nil)
 				default:
-					message, _ := reader.ReadMessage(r.Context())
-					if len(message.Value) == 0 {
+					ctx, cancel = context.WithTimeout(r.Context(), pending)
+					message, err := reader.ReadMessage(ctx)
+					cancel()
+
+					if err != nil {
+						if errors.Is(err, context.DeadlineExceeded) {
+							if isClosed(&closed) {
+								continue
+							}
+
+							if err := conn.WriteMessage(websocket.TextMessage, []byte(location)); err != nil {
+								log.Error().Err(err).Msg("error sending data to the websocket client")
+							}
+							continue
+						}
+						log.Error().Err(err).Msg("error reading message from kafka")
 						continue
 					}
+
+					if len(message.Value) == 0 || isClosed(&closed) {
+						continue
+					}
+
+					location = string(message.Value)
 					if err := conn.WriteMessage(websocket.TextMessage, message.Value); err != nil {
 						log.Error().Err(err).Msg("error sending data to the websocket client")
-						return
+						continue
 					}
 				}
 			}
 		}()
 
 		conn.OnClose(func(c *websocket.Conn, err error) {
+			close(done)
+			atomic.StoreInt32(&closed, 1)
+
 			go func() {
 				ctx := context.TODO()
 
@@ -139,7 +178,11 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	}
 }
 
-func resetActiveConn(ctx context.Context, client *redis.Client, key string) {
+func resetActiveConn(
+	ctx context.Context,
+	client *redis.Client,
+	key string,
+) {
 	ttl := client.TTL(ctx, key).Val()
 	client.SetNX(ctx, key, 0, ttl)
 }

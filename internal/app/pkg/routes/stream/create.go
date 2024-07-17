@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -50,19 +51,30 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	}
 
 	var driverID *int
+	var bookPickupAddr *string
 
 	query := `
 SELECT
-	DriverPk
+	DriverPk,
+  BookPickUpAddr
 FROM
 	Tbl_BookingDetails
 WHERE
 	BookRefNo = @BookRefNo;
 `
 
-	err := c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID)
+	err := c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID, &bookPickupAddr)
 	if err != nil || driverID == nil {
 		log.Error().Err(err).Str("booking_id", reqBody.BookingID).Msg("failed to get the driver ID from the booking ID")
+		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+		return
+	}
+	pickups := []services.Geo{}
+	if bookPickupAddr != nil {
+		pickups = append(pickups, services.Geocode(r.Context(), e, c, true, lib.Seperator(*bookPickupAddr, "|"))...)
+	}
+	if len(pickups) == 0 {
+		log.Error().Msg("cannot find the pickup address for the given location")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}
@@ -179,7 +191,7 @@ WHERE
 
 	bt := tokens.NewBookingToken(e, c)
 
-	token, err := bt.Create(r.Context(), *driverID, reqBody.BookingID, partition, newOffset, payload)
+	token, err := bt.Create(r.Context(), *driverID, reqBody.BookingID, partition, newOffset, payload, pickups[0])
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
