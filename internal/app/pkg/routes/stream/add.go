@@ -62,6 +62,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		return
 	}
 
+	log.Debug().Msg(payload)
 	go func(payload string) {
 		err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
 		if err != nil {
