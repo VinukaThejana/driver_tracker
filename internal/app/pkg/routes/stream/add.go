@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -65,7 +66,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	log.Debug().
 		Int("partition", partitionNo).
 		Int("driver_id", driverID).
-		Msg(payload)
+		Msg(payload + " " + fmt.Sprint(partitionNo) + " " + fmt.Sprint(driverID))
 	go func(payload string) {
 		err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
 		if err != nil {
