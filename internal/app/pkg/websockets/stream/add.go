@@ -2,13 +2,13 @@ package stream
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -54,13 +54,21 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			return
 		}
 		if err = v.Struct(data); err != nil {
-			log.Error().Err(err).Interface("body", data).Msg("provided data with the websocket connection is not valid")
+			log.Error().
+				Err(err).
+				Interface("body", data).
+				Msg("provided data with the websocket connection is not valid")
 			return
 		}
 
 		payload, err = sonic.MarshalString(blob(data))
 		if err != nil {
-			log.Error().Err(err).Interface("data", data).Int("partition", partitionNo).Int("driver_id", driverID).Msg("failed to marshal the payload")
+			log.Error().
+				Err(err).
+				Interface("data", data).
+				Int("partition", partitionNo).
+				Int("driver_id", driverID).
+				Msg("failed to marshal the payload")
 			return
 		}
 
@@ -72,12 +80,14 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		if count < updateinterval {
 			count++
 		} else {
-			c.R.DB.Set(r.Context(), fmt.Sprintf("l%d", partitionNo), payload, redis.KeepTTL)
+			c.R.DB.Set(r.Context(), lib.L(partitionNo), payload, redis.KeepTTL)
 			count = 1
 		}
 	})
 	upgrader.OnOpen(func(conn *websocket.Conn) {
-		log.Info().Str("addr", conn.RemoteAddr().String()).Msg("connection opened")
+		log.Info().
+			Str("addr", conn.RemoteAddr().String()).
+			Msg("connection opened")
 		done := make(chan struct{})
 		closed := int32(0)
 
@@ -103,16 +113,23 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			atomic.StoreInt32(&closed, 1)
 
 			if err != nil {
-				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
+				log.Error().
+					Err(err).
+					Str("addr", c.RemoteAddr().String()).
+					Msg("connection closed with error")
 			} else {
-				log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection closed")
+				log.Info().Str("addr", c.
+					RemoteAddr().String()).
+					Msg("connection closed")
 			}
 		})
 	})
 
 	_, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Error().Err(err).Msg("error occured while upgrading the websocket connection")
+		log.Error().
+			Err(err).
+			Msg("error occured while upgrading the websocket connection")
 		return
 	}
 }

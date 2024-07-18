@@ -152,7 +152,10 @@ func (c *C) GetLastNMessages(ctx context.Context, e *env.Env, from, to int64, to
 
 		err = sonic.Unmarshal(m.Value, &payload)
 		if err != nil {
-			log.Error().Err(err).Str("value", string(m.Value)).Msg("failed to unmarshal the payload receiving from kafka")
+			log.Error().
+				Err(err).
+				Str("value", string(m.Value)).
+				Msg("failed to unmarshal the payload receiving from kafka")
 			continue
 		}
 

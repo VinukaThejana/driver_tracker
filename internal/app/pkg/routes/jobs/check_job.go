@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -24,12 +25,12 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 		go func(job string) {
 			defer wg.Done()
 
-			val := client.Get(r.Context(), "c"+job).Val()
+			val := client.Get(r.Context(), lib.C(job)).Val()
 			if val != "" {
 				return
 			}
 
-			val = client.Get(r.Context(), "n"+job).Val()
+			val = client.Get(r.Context(), lib.N(job)).Val()
 			if val == "" {
 				log.Warn().
 					Str("job", job).
@@ -78,7 +79,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 				return
 			}
 
-			err = client.Del(r.Context(), "n"+job).Err()
+			err = client.Del(r.Context(), lib.N(job)).Err()
 			if err != nil {
 				log.Error().
 					Err(err).

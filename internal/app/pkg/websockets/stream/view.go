@@ -3,16 +3,16 @@ package stream
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	_errors "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/redis/go-redis/v9"
@@ -38,22 +38,22 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	err := sonic.UnmarshalString(val, &payload)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
-		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	partition := payload[0]
-	cKey := fmt.Sprintf("c%d", partition)
+	cKey := lib.C(partition)
 
 	val = client.Get(r.Context(), cKey).Val()
 	if val == "" {
 		log.Warn().Msg("number of connections is not present in the redis db")
-		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	connections, err := strconv.Atoi(val)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to convert the maximum connections to int")
-		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 	if connections >= e.MaxConnections {
@@ -61,15 +61,15 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 			Str("bookingID", bookingID).
 			Int("connections", connections).
 			Msg("maximum number of connections reached for the booking")
-		http.Error(w, errs.ErrBadRequest.Error(), http.StatusTooManyRequests)
+		http.Error(w, _errors.ErrBadRequest.Error(), http.StatusTooManyRequests)
 		return
 	}
 	client.Incr(r.Context(), cKey)
 
-	location := client.Get(r.Context(), fmt.Sprintf("l%d", partition)).Val()
+	location := client.Get(r.Context(), lib.L(partition)).Val()
 	if location == "" {
 		log.Error().Msg("failed to get the last location from redis")
-		http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -84,7 +84,9 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	)
 
 	upgrader.OnOpen(func(conn *websocket.Conn) {
-		log.Info().Str("addr", conn.RemoteAddr().String()).Msg("connection opened")
+		log.Info().
+			Str("addr", conn.RemoteAddr().
+				String()).Msg("connection opened")
 		done := make(chan struct{})
 		closed := int32(0)
 
@@ -166,7 +168,9 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 			if err != nil {
 				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
 			} else {
-				log.Info().Str("addr", c.RemoteAddr().String()).Msg("connection closed")
+				log.Info().
+					Str("addr", c.RemoteAddr().String()).
+					Msg("connection closed")
 			}
 		})
 	})

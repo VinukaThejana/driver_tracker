@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -42,9 +43,9 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	pipe.Del(r.Context(), bookingID)
 	pipe.Del(r.Context(), fmt.Sprint(driverID))
-	pipe.Del(r.Context(), fmt.Sprintf("l%d", partitionNo))
-	pipe.Del(r.Context(), fmt.Sprintf("n%d", partitionNo))
-	pipe.Del(r.Context(), fmt.Sprintf("c%d", partitionNo))
+	pipe.Del(r.Context(), _lib.L(partitionNo))
+	pipe.Del(r.Context(), _lib.N(partitionNo))
+	pipe.Del(r.Context(), _lib.C(partitionNo))
 
 	_, err = pipe.Exec(r.Context())
 	if err != nil {

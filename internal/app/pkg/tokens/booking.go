@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -99,9 +100,9 @@ func (bt *BookingToken) Create(
 	pipe := bt.C.R.DB.Pipeline()
 	pipe.SetNX(ctx, fmt.Sprint(driverID), id.String(), duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
-	pipe.SetNX(ctx, fmt.Sprintf("l%d", partitionNo), pickupStr, duration)
-	pipe.SetNX(ctx, fmt.Sprintf("c%d", partitionNo), 0, duration)
-	pipe.SetNX(ctx, fmt.Sprintf("n%d", partitionNo), nPayload, duration+12*time.Hour)
+	pipe.SetNX(ctx, lib.L(partitionNo), pickupStr, duration)
+	pipe.SetNX(ctx, lib.C(partitionNo), 0, duration)
+	pipe.SetNX(ctx, lib.N(partitionNo), nPayload, duration+12*time.Hour)
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {

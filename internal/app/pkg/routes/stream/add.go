@@ -2,12 +2,12 @@ package stream
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/bytedance/sonic"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -63,7 +63,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	}
 
 	go func(payload string) {
-		err = c.R.DB.Set(r.Context(), fmt.Sprintf("l%d", partitionNo), payload, redis.KeepTTL).Err()
+		err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
 		if err != nil {
 			log.Error().Err(err).Str("payload", payload).Msg("failed to set the live location")
 		}
@@ -79,7 +79,10 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		Value: []byte(payload),
 	})
 
-	log.Info().Int("partition", partitionNo).Int("driver_id", driverID).Msg("recorded the location ... ")
+	log.Info().
+		Int("partition", partitionNo).
+		Int("driver_id", driverID).
+		Msg("recorded the location ... ")
 	lib.JSONResponse(w, http.StatusOK, "added")
 }
 

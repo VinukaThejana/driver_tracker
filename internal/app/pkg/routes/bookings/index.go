@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bytedance/sonic"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
@@ -31,7 +32,7 @@ func index(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C)
 	}
 
 	for _, job := range jobs {
-		val := client.Get(r.Context(), "c"+job).Val()
+		val := client.Get(r.Context(), _lib.C(job)).Val()
 		if val == "" {
 			bookingID = getBookingID(r.Context(), e, client, job)
 			if bookingID == "" {
@@ -50,7 +51,7 @@ func index(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C)
 }
 
 func getBookingID(ctx context.Context, e *env.Env, client *redis.Client, job string) (bookingID string) {
-	val := client.Get(ctx, "n"+job).Val()
+	val := client.Get(ctx, _lib.N(job)).Val()
 	if val == "" {
 		log.Warn().
 			Str("job", job).

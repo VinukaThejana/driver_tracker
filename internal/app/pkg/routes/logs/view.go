@@ -10,7 +10,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	_errors "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -27,13 +27,13 @@ type bookingDetails struct {
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	bookingID := chi.URLParam(r, "booking_id")
 	if bookingID == "" {
-		lib.JSONResponse(w, http.StatusBadRequest, errs.ErrBookingIDNotValid.Error())
+		lib.JSONResponse(w, http.StatusBadRequest, _errors.ErrBookingIDNotValid.Error())
 	}
 
 	err := c.InitStorage(e)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to initialize the storage client")
-		lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
+		lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 		return
 	}
 	defer c.S.Close()
@@ -43,8 +43,10 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	reader, err := object.NewReader(r.Context())
 	if err != nil {
-		log.Error().Err(err).Str("booking_id", bookingID).Msg("failed to initialize the reader, either because the booking id is not valid or some autentication error")
-		lib.JSONResponse(w, http.StatusBadRequest, errs.ErrBookingIDNotValid.Error())
+		log.Error().Err(err).
+			Str("booking_id", bookingID).
+			Msg("failed to initialize the reader, either because the booking id is not valid or some autentication error")
+		lib.JSONResponse(w, http.StatusBadRequest, _errors.ErrBookingIDNotValid.Error())
 		return
 	}
 	defer reader.Close()
@@ -52,19 +54,22 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	data, err := io.ReadAll(reader)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to read the data")
-		lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
+		lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 		return
 	}
 	if data == nil {
-		lib.JSONResponse(w, http.StatusBadRequest, errs.ErrBookingIDNotValid.Error())
+		lib.JSONResponse(w, http.StatusBadRequest, _errors.ErrBookingIDNotValid.Error())
 		return
 	}
 
 	var payload any
 	err = sonic.Unmarshal(data, &payload)
 	if err != nil {
-		log.Error().Err(err).Interface("payload", payload).Msg("failed to marshal the data from the payload")
-		lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
+		log.Error().
+			Err(err).
+			Interface("payload", payload).
+			Msg("failed to marshal the data from the payload")
+		lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 		return
 	}
 
@@ -93,7 +98,7 @@ WHERE
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			log.Error().Err(err).Msg("failed to get the query from the database")
-			lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
+			lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 			return
 		}
 	}

@@ -52,7 +52,9 @@ func IsContentJSON(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		contentType := r.Header.Get("Content-Type")
 		if !strings.HasPrefix(contentType, "application/json") {
-			log.Error().Str("Content-Type", contentType).Msg("invalid content type provided")
+			log.Error().
+				Str("Content-Type", contentType).
+				Msg("invalid content type provided")
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			sonic.ConfigDefault.NewEncoder(w).Encode(

@@ -12,7 +12,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	_errors "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/rs/zerolog/log"
 )
 
@@ -46,7 +46,7 @@ const (
 func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		driverToken := ""
-		unauthorizedErr := errs.ErrUnauthorized
+		unauthorizedErr := _errors.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -88,7 +88,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookingToken := ""
-		unauthorizedErr := errs.ErrUnauthorized
+		unauthorizedErr := _errors.ErrUnauthorized
 
 		authorization := strings.Split(r.Header.Get("Authorization"), " ")
 		if len(authorization) == 2 {
@@ -148,12 +148,12 @@ func isSuperAdmin(r *http.Request, e *env.Env, _ *connections.C) (isAdmin bool, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return false, errs.ErrServer
+		return false, _errors.ErrServer
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return false, errs.ErrServer
+		return false, _errors.ErrServer
 	}
 
 	var payload any
@@ -163,11 +163,11 @@ func isSuperAdmin(r *http.Request, e *env.Env, _ *connections.C) (isAdmin bool, 
 	}
 	secret, ok := payload.(string)
 	if !ok {
-		return false, errs.ErrServer
+		return false, _errors.ErrServer
 	}
 	key := r.URL.Query().Get("secret")
 	if key != secret {
-		return false, errs.ErrUnauthorized
+		return false, _errors.ErrUnauthorized
 	}
 
 	return true, nil
@@ -178,17 +178,17 @@ func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isSuperAdmin, err := isSuperAdmin(r, e, c)
 		if err != nil {
-			if errors.Is(err, errs.ErrUnauthorized) {
-				http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			if errors.Is(err, _errors.ErrUnauthorized) {
+				http.Error(w, _errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
 				return
 			}
 
 			log.Error().Err(err).Msg("failed to validate the superadmin")
-			http.Error(w, errs.ErrServer.Error(), http.StatusInternalServerError)
+			http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 			return
 		}
 		if !isSuperAdmin {
-			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, _errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -197,7 +197,7 @@ func IsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler 
 
 func getAdmin(r *http.Request, e *env.Env, c *connections.C) (adminID int, err error) {
 	adminToken := ""
-	unauthorizedErr := errs.ErrUnauthorized
+	unauthorizedErr := _errors.ErrUnauthorized
 
 	authorization := strings.Split(r.Header.Get("Authorization"), " ")
 	if len(authorization) == 2 {
@@ -239,7 +239,7 @@ func IsAdminOrIsSuperAdmin(next http.Handler, e *env.Env, c *connections.C) http
 
 		_, err := getAdmin(r, e, c)
 		if err != nil {
-			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, _errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -252,7 +252,7 @@ func IsAdmin(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		adminID, err := getAdmin(r, e, c)
 		if err != nil {
-			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, _errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -268,7 +268,7 @@ func IsCron(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		secret := r.URL.Query().Get("secret")
 		if secret != e.AdminSecret {
-			http.Error(w, errs.ErrUnauthorized.Error(), http.StatusUnauthorized)
+			http.Error(w, _errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
 			return
 		}
 

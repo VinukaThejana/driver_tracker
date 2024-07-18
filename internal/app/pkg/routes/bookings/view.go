@@ -10,7 +10,7 @@ import (
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/enums"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	errs "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	_errors "github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/lib"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -41,7 +41,7 @@ type geo struct {
 func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	bookingID := chi.URLParam(r, "booking_id")
 	if bookingID == "" {
-		lib.JSONResponse(w, http.StatusBadRequest, errs.ErrBookingIDNotValid.Error())
+		lib.JSONResponse(w, http.StatusBadRequest, _errors.ErrBookingIDNotValid.Error())
 		return
 	}
 
@@ -87,12 +87,12 @@ WHERE
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			lib.JSONResponse(w, http.StatusNotFound, errs.ErrBookingIDNotValid.Error())
+			lib.JSONResponse(w, http.StatusNotFound, _errors.ErrBookingIDNotValid.Error())
 			return
 		}
 
 		log.Error().Err(err).Msg("failed to get the query from the database")
-		lib.JSONResponse(w, http.StatusInternalServerError, errs.ErrServer.Error())
+		lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 		return
 	}
 

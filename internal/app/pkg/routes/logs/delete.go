@@ -32,7 +32,10 @@ func delete(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 
 	err = object.Delete(r.Context())
 	if err != nil {
-		log.Error().Err(err).Str("booking_id", bookingID).Msg("failed to delete the object possibly the booking id is not valid")
+		log.Error().
+			Err(err).
+			Str("booking_id", bookingID).
+			Msg("failed to delete the object possibly the booking id is not valid")
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBookingIDNotValid.Error())
 		return
 	}

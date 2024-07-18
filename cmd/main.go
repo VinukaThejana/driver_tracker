@@ -115,7 +115,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	log.Info().Msgf("started the HTTP server and listening on port : %d", e.Port)
+	log.Info().
+		Msgf("started the HTTP server and listening on port : %d", e.Port)
 	go func() {
 		select {
 		case <-ctx.Done():
@@ -130,7 +131,10 @@ func main() {
 
 	select {
 	case sig := <-signalCh:
-		log.Info().Str("cause", "signal").Str("signal", sig.String()).Msg("shutting down server")
+		log.Info().
+			Str("cause", "signal").
+			Str("signal", sig.String()).
+			Msg("shutting down server")
 		shutdown(ctx, engine)
 		break
 	case <-ctx.Done():
