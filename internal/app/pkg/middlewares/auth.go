@@ -54,6 +54,7 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 		} else {
 			driverTokenC, err := r.Cookie(e.DriverCookieName)
 			if err != nil {
+				log.Error().Err(err).Msg("failed to read the cookie")
 				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 				return
 			}
@@ -62,6 +63,10 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 		}
 
 		if driverToken == "" {
+			log.Error().
+				Interface("header", r.Header.Clone()).
+				Str("authorization", r.Header.Get("Authorization")).
+				Msg("failed to authenticate the driver")
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -70,6 +75,9 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 
 		isValid, token := dt.Validate(driverToken)
 		if !isValid {
+			log.Error().
+				Str("driver_token", driverToken).
+				Msg("failed to authenticate the driver")
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -96,6 +104,7 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 		} else {
 			bookingTokenC, err := r.Cookie(e.BookingCookieName)
 			if err != nil {
+				log.Error().Err(err).Msg("failed to read the cookie")
 				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 				return
 			}
@@ -104,6 +113,11 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 		}
 
 		if bookingToken == "" {
+			log.Error().
+				Interface("header", r.Header.Clone()).
+				Str("authorization", r.Header.Get("Authorization")).
+				Msg("failed to authenticate the booking token")
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -112,12 +126,18 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 
 		isValid, token := bt.Validate(r.Context(), bookingToken)
 		if !isValid {
+			log.Error().
+				Str("booking_token", bookingToken).
+				Msg("failed to validate the booking token")
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
 
 		id, driverID, bookingID, partitionNo, err := bt.Get(token)
 		if err != nil {
+			log.Error().
+				Str("booking_token", bookingToken).
+				Msg("failed to validate the booking token")
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -216,6 +236,9 @@ func getAdmin(r *http.Request, e *env.Env, c *connections.C) (adminID int, err e
 
 	isValid, token := at.Validate(adminToken)
 	if !isValid {
+		log.Error().
+			Str("admin_token", adminToken).
+			Msg("failed to validate the admin")
 		return -1, unauthorizedErr
 	}
 
