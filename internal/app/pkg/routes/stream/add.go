@@ -19,11 +19,11 @@ import (
 )
 
 type req struct {
-	Accuracy      *float64 `json:"accuracy"`
-	SpeedAccuracy *float64 `json:"speed_accuracy"`
-	Heading       *float64 `json:"heading"`
-	Lat           float64  `json:"lat" validate:"required,latitude"`
-	Lon           float64  `json:"lon" validate:"required,longitude"`
+	Accuracy *float64 `json:"accuracy"`
+	Heading  *float64 `json:"heading"`
+	Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
+	Lat      float64  `json:"lat" validate:"required,latitude"`
+	Lon      float64  `json:"lon" validate:"required,longitude"`
 }
 
 // add is a route that is used to add data to the stream
@@ -102,11 +102,11 @@ func blob(payload req) map[string]any {
 			}
 			return *payload.Accuracy
 		}(),
-		"speed_accuracy": func() float64 {
-			if payload.SpeedAccuracy == nil {
-				return -1
+		"status": func() int {
+			if payload.Status == nil {
+				return int(_lib.DefaultStatus)
 			}
-			return *payload.SpeedAccuracy
+			return int(*payload.Status)
 		}(),
 		"timestamp": time.Now().UTC().Unix(),
 	}

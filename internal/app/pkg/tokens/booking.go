@@ -86,12 +86,12 @@ func (bt *BookingToken) Create(
 	}
 
 	pickupStr, err := sonic.MarshalString(map[string]any{
-		"lat":            pickup.Lat,
-		"lon":            pickup.Lon,
-		"heading":        0,
-		"accuracy":       -1,
-		"speed_accuracy": -1,
-		"timestamp":      time.Now().UTC().Unix(),
+		"lat":       pickup.Lat,
+		"lon":       pickup.Lon,
+		"heading":   0,
+		"accuracy":  -1,
+		"status":    lib.DefaultStatus,
+		"timestamp": time.Now().UTC().Unix(),
 	})
 	if err != nil {
 		return "", err

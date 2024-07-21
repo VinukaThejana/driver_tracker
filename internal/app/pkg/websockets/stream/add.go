@@ -19,11 +19,11 @@ import (
 )
 
 type req struct {
-	Accuracy      *float64 `json:"accuracy"`
-	SpeedAccuracy *float64 `json:"speed_accuracy"`
-	Heading       *float64 `json:"heading"`
-	Lat           float64  `json:"lat" validate:"required,latitude"`
-	Lon           float64  `json:"lon" validate:"required,longitude"`
+	Accuracy *float64 `json:"accuracy"`
+	Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
+	Heading  *float64 `json:"heading"`
+	Lat      float64  `json:"lat" validate:"required,latitude"`
+	Lon      float64  `json:"lon" validate:"required,longitude"`
 }
 
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
@@ -152,11 +152,12 @@ func blob(
 			}
 			return *payload.Accuracy
 		}(),
-		"speed_accuracy": func() float64 {
-			if payload.SpeedAccuracy == nil {
-				return -1
+		"status": func() int {
+			if payload.Status == nil {
+				return int(lib.DefaultStatus)
 			}
-			return *payload.SpeedAccuracy
+
+			return int(*payload.Status)
 		}(),
 	}
 }
