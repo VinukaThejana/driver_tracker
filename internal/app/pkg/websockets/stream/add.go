@@ -54,21 +54,23 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			return
 		}
 		if err = v.Struct(data); err != nil {
-			log.Error().
-				Err(err).
-				Interface("body", data).
-				Msg("provided data with the websocket connection is not valid")
+			log.Error().Err(err).
+				Msgf(
+					"body : %v\tprovided data with the websocket connection is not valid",
+					data,
+				)
 			return
 		}
 
 		payload, err = sonic.MarshalString(blob(data))
 		if err != nil {
-			log.Error().
-				Err(err).
-				Interface("data", data).
-				Int("partition", partitionNo).
-				Int("driver_id", driverID).
-				Msg("failed to marshal the payload")
+			log.Error().Err(err).
+				Msgf(
+					"data : %v\tpartition : %d\tdriver_id : %d\tfailed to marshal the payload",
+					data,
+					partitionNo,
+					driverID,
+				)
 			return
 		}
 
@@ -86,8 +88,10 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	})
 	upgrader.OnOpen(func(conn *websocket.Conn) {
 		log.Info().
-			Str("addr", conn.RemoteAddr().String()).
-			Msg("connection opened")
+			Msgf(
+				"addr : %s\tconnection opened",
+				conn.RemoteAddr().String(),
+			)
 		done := make(chan struct{})
 		closed := int32(0)
 
@@ -113,14 +117,17 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			atomic.StoreInt32(&closed, 1)
 
 			if err != nil {
-				log.Error().
-					Err(err).
-					Str("addr", c.RemoteAddr().String()).
-					Msg("connection closed with error")
+				log.Error().Err(err).
+					Msgf(
+						"addr : %s\tconnection closed with error",
+						c.RemoteAddr().String(),
+					)
 			} else {
-				log.Info().Str("addr", c.
-					RemoteAddr().String()).
-					Msg("connection closed")
+				log.Info().
+					Msgf(
+						"addr : %s\tconnection closed",
+						c.RemoteAddr().String(),
+					)
 			}
 		})
 	})

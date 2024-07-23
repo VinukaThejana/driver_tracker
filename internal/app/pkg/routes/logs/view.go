@@ -44,8 +44,10 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	reader, err := object.NewReader(r.Context())
 	if err != nil {
 		log.Error().Err(err).
-			Str("booking_id", bookingID).
-			Msg("failed to initialize the reader, either because the booking id is not valid or some autentication error")
+			Msgf(
+				"booking_id : %s\tfailed to initialize the reader, either because the booking id is not valid or some autentication error",
+				bookingID,
+			)
 		lib.JSONResponse(w, http.StatusBadRequest, _errors.ErrBookingIDNotValid.Error())
 		return
 	}
@@ -65,10 +67,11 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	var payload any
 	err = sonic.Unmarshal(data, &payload)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Interface("payload", payload).
-			Msg("failed to marshal the data from the payload")
+		log.Error().Err(err).
+			Msgf(
+				"payload : %v\tfailed to marshal the data from the payload",
+				payload,
+			)
 		lib.JSONResponse(w, http.StatusInternalServerError, _errors.ErrServer.Error())
 		return
 	}

@@ -58,9 +58,11 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 	}
 	if connections >= e.MaxConnections {
 		log.Warn().
-			Str("bookingID", bookingID).
-			Int("connections", connections).
-			Msg("maximum number of connections reached for the booking")
+			Msgf(
+				"booking_id : %s\tconnections : %d\tmaximum number of connections reached for the booking",
+				bookingID,
+				connections,
+			)
 		http.Error(w, _errors.ErrBadRequest.Error(), http.StatusTooManyRequests)
 		return
 	}
@@ -85,8 +87,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 
 	upgrader.OnOpen(func(conn *websocket.Conn) {
 		log.Info().
-			Str("addr", conn.RemoteAddr().
-				String()).Msg("connection opened")
+			Msgf("addr : %s\tconnection opened", conn.RemoteAddr().String())
 		done := make(chan struct{})
 		closed := int32(0)
 
@@ -166,11 +167,17 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 			}()
 
 			if err != nil {
-				log.Error().Err(err).Str("addr", c.RemoteAddr().String()).Msg("connection closed with error")
+				log.Error().Err(err).
+					Msgf(
+						"addr : %s\tconnection closed with error",
+						c.RemoteAddr().String(),
+					)
 			} else {
 				log.Info().
-					Str("addr", c.RemoteAddr().String()).
-					Msg("connection closed")
+					Msgf(
+						"addr : %s\tconnection closed",
+						c.RemoteAddr().String(),
+					)
 			}
 		})
 	})

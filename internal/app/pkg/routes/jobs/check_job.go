@@ -33,59 +33,64 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 			val = client.Get(r.Context(), lib.N(job)).Val()
 			if val == "" {
 				log.Warn().
-					Str("job", job).
-					Str("redis-value", val).
-					Msg("the job cannot be found with n- partitions")
+					Msgf(
+						"job : %s\tredis-value : %s\tthe job cannot be found with n- partitions",
+						job,
+						val,
+					)
 				return
 			}
 
 			var payload []string
 			err := sonic.UnmarshalString(val, &payload)
 			if err != nil {
-				log.Error().
-					Err(err).
-					Str("job", job).
-					Str("redis-value", val).
-					Msg("cannot unmarshal the payload")
+				log.Error().Err(err).
+					Msgf(
+						"job : %s\tredis-value : %s\tcannot unmarshal the payload",
+						job,
+						val,
+					)
 				return
 			}
 			if len(payload) != 2 {
-				log.Error().
-					Err(
-						fmt.
-							Errorf("the payload did not contains the booking ID and the offset")).
-					Str("job", job).
-					Str("redis-value", val).
-					Interface("payload", payload).
-					Msg("the payload in n- partition is not equal to two")
+				log.Error().Err(fmt.Errorf("the payload did not contains the booking ID and the offset")).
+					Msgf(
+						"job : %s\tredis-value : %s\tpayload : %v\tthe payload in n- partition is not equal to two",
+						job,
+						val,
+						payload,
+					)
 				return
 			}
 			startOffset, err := strconv.Atoi(payload[1])
 			if err != nil {
-				log.Error().
-					Err(err).
-					Str("job", job).
-					Str("redis-value", val).
-					Msg("failed to convert the offset to int")
+				log.Error().Err(err).
+					Msgf(
+						"job : %s\tredis-value : %s\tfailed to convert the offset to int",
+						job,
+						val,
+					)
 				return
 			}
 			partition, err := strconv.Atoi(job)
 			if err != nil {
-				log.Error().
-					Err(err).
-					Str("job", job).
-					Str("redis-value", val).
-					Msg("failed to convert the job to integer")
+				log.Error().Err(err).
+					Msgf(
+						"job : %s\tredis-value : %s\tfailed to convert the job to integer",
+						job,
+						val,
+					)
 				return
 			}
 
 			err = client.Del(r.Context(), lib.N(job)).Err()
 			if err != nil {
-				log.Error().
-					Err(err).
-					Str("job", job).
-					Str("redis-value", val).
-					Msg("failed to delete the key in redis")
+				log.Error().Err(err).
+					Msgf(
+						"job : %s\tredis-value : %s\tfailed to delete the key in redis",
+						job,
+						val,
+					)
 			}
 
 			go services.GenerateLog(e, c, []int{partition, startOffset}, payload[0])

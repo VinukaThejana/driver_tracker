@@ -65,10 +65,11 @@ WHERE
 
 	err := c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID, &bookPickupAddr)
 	if err != nil || driverID == nil {
-		log.Error().
-			Err(err).
-			Str("booking_id", reqBody.BookingID).
-			Msg("failed to get the driver ID from the booking ID")
+		log.Error().Err(err).
+			Msgf(
+				"booking_id : %s\tfailed to get the driver ID from the booking ID",
+				reqBody.BookingID,
+			)
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}

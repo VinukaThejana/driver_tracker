@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,13 +41,28 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		log.Error().Err(err).Msg("request body is not supported")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Error().Err(err).
+				Msg("failed to read the request body")
+		} else {
+			log.Error().Err(err).
+				Msgf(
+					"raw_body : %s\tfailed to read the request body",
+					string(body),
+				)
+		}
+
 		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
 	}
 
 	if err = v.Struct(data); err != nil {
-		log.Error().Err(err).Interface("body", data).Msg("failed to validate the request body")
+		log.Error().Err(err).
+			Msgf(
+				"body : %v\tfailed to validate the request body",
+				data,
+			)
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBadRequest.Error())
 		return
 	}
@@ -65,7 +81,11 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	go func(payload string) {
 		err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
 		if err != nil {
-			log.Error().Err(err).Str("payload", payload).Msg("failed to set the live location")
+			log.Error().Err(err).
+				Msgf(
+					"payload : %s\tfailed to set the live location",
+					payload,
+				)
 		}
 	}(payload)
 
@@ -80,9 +100,11 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	})
 
 	log.Info().
-		Int("partition", partitionNo).
-		Int("driver_id", driverID).
-		Msg("recorded the location ... ")
+		Msgf(
+			"partition : %d\tdriver_id : %d\trecorded the live location ... ",
+			partitionNo,
+			driverID,
+		)
 	lib.JSONResponse(w, http.StatusOK, "added")
 }
 

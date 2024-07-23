@@ -31,12 +31,17 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 	}
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get the last offset")
-		log.Warn().Interface("payload", payload)
+		log.Warn().Msgf("payload : %v", payload)
 		return
 	}
 
 	defer func() {
-		log.Warn().Int("start", int(startOffset)).Int("end", int(endOffset))
+		log.Warn().
+			Msgf(
+				"start : %d\tend : %d",
+				int(startOffset),
+				int(endOffset),
+			)
 	}()
 
 	messages, err := c.GetLastNMessages(ctx, e, startOffset, endOffset, e.Topic, partition)
@@ -52,11 +57,12 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 
 	err = c.InitStorage(e)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Int("start", int(startOffset)).
-			Int("end", int(endOffset)).
-			Msg("failed to initialize the storage client")
+		log.Error().Err(err).
+			Msgf(
+				"start : %d\tend : %d\tfailed to initialize the storage client",
+				int(startOffset),
+				int(endOffset),
+			)
 		return
 	}
 	defer c.S.Close()
@@ -79,9 +85,10 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 func free(ctx context.Context, client *redis.Client, key string, partition int) {
 	err := client.SRem(ctx, key, partition).Err()
 	if err != nil {
-		log.Error().
-			Err(err).
-			Int("partition", partition).
-			Msg("failed to remove the partition")
+		log.Error().Err(err).
+			Msgf(
+				"partition : %d\tfailed to remove the partition",
+				partition,
+			)
 	}
 }

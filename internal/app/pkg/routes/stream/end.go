@@ -34,7 +34,11 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	payload := make([]int, 3)
 	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &payload)
 	if err != nil {
-		log.Error().Err(err).Interface("payload", payload).Msg("failed to backup the job")
+		log.Error().Err(err).
+			Msgf(
+				"payload : %v\tfailed to backup the job",
+				payload,
+			)
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
 	}

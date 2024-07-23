@@ -116,7 +116,7 @@ func main() {
 	defer cancel()
 
 	log.Info().
-		Msgf("started the HTTP server and listening on port : %d", e.Port)
+		Msgf("port : %d\t starting .... ", e.Port)
 	go func() {
 		select {
 		case <-ctx.Done():
@@ -132,9 +132,10 @@ func main() {
 	select {
 	case sig := <-signalCh:
 		log.Info().
-			Str("cause", "signal").
-			Str("signal", sig.String()).
-			Msg("shutting down server")
+			Msgf(
+				"cause : signal\tsignal : %s\tshutting down server ... ",
+				sig.String(),
+			)
 		shutdown(ctx, engine)
 		break
 	case <-ctx.Done():

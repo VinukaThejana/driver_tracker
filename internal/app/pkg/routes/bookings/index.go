@@ -54,15 +54,19 @@ func getBookingID(ctx context.Context, e *env.Env, client *redis.Client, job str
 	val := client.Get(ctx, _lib.N(job)).Val()
 	if val == "" {
 		log.Warn().
-			Str("job", job).
-			Str("value", val).
-			Msg("the n- job has also been deleted")
+			Msgf(
+				"job : %s\tvalue : %s\tthe n- job has also been deleted",
+				job,
+				val,
+			)
 
 		err := client.SRem(ctx, e.PartitionManagerKey, job).Err()
 		if err != nil {
 			log.Error().Err(err).
-				Str("job", job).
-				Msg("failed to delete the job from the job manager")
+				Msgf(
+					"job : %s\tfailed to delete the job from the job manager",
+					job,
+				)
 		}
 		return ""
 	}
@@ -71,9 +75,11 @@ func getBookingID(ctx context.Context, e *env.Env, client *redis.Client, job str
 	err := sonic.UnmarshalString(val, &payload)
 	if err != nil || len(payload) != 2 {
 		log.Error().Err(err).
-			Str("job", job).
-			Interface("payload", val).
-			Msg("failed to unmarshal the job with n-")
+			Msgf(
+				"job : %s\tpayload : %v\tfailed to unmarshal the job with n-",
+				job,
+				val,
+			)
 		return ""
 	}
 
