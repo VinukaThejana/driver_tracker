@@ -18,18 +18,11 @@ import (
 
 // End is a route that is used to end a given stream
 func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
-	id := r.Context().Value(middlewares.BookingTokenID).(string)
 	bookingID := r.Context().Value(middlewares.BookingID).(string)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 
 	client := c.R.DB
-
-	val := client.Get(r.Context(), fmt.Sprint(driverID)).Val()
-	if val != id {
-		lib.JSONResponse(w, http.StatusUnauthorized, errors.ErrUnauthorized.Error())
-		return
-	}
 
 	payload := make([]int, 3)
 	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &payload)
