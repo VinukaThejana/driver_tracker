@@ -53,6 +53,8 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	var driverID *int
 	var bookPickupAddr *string
 
+	// FIX: REMOVE THIS AS SOON AS THE DRIVER TOKEN IS STABALIZED
+	// otherwise this will cause the response time to be slow
 	query := `
 SELECT
 	DriverPk,
@@ -281,7 +283,13 @@ func generate(
 	if err != nil {
 		return "", 0, err
 	}
-	client.Set(ctx, fmt.Sprint(driverID), id.String(), ttl)
+
+	driverDetails, err := sonic.MarshalString([]string{id.String(), bookingID, fmt.Sprint(partition)})
+	if err != nil {
+		return "", 0, err
+	}
+
+	client.Set(ctx, fmt.Sprint(driverID), driverDetails, ttl)
 
 	return token, 0, nil
 }
