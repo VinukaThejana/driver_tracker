@@ -28,7 +28,12 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 
 	r.Route("/add", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsBookingTokenValid(h, e, c)
+			return middlewares.IsBookingTokenValid(
+				h,
+				e,
+				c,
+				false,
+			)
 		})
 		r.Use(middlewares.IsContentJSON)
 		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +42,10 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 	})
 	r.Route("/end", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.ValidateDriverOrBookingToken(h, e, c)
+			return middlewares.ValidateDriverOrBookingToken(h,
+				e,
+				c,
+			)
 		})
 		r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
 			end(w, r, e, c)

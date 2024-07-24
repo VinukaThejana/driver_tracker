@@ -33,7 +33,12 @@ func WebSocket(e *env.Env, c *connections.C) http.Handler {
 
 	r.Route("/add", func(r chi.Router) {
 		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsBookingTokenValid(h, e, c)
+			return middlewares.IsBookingTokenValid(
+				h,
+				e,
+				c,
+				true,
+			)
 		})
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 			add(w, r, e, c)
