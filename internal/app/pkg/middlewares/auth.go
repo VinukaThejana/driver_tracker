@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/bytedance/sonic"
@@ -124,7 +125,6 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 					r.Header.Get("Authorization"),
 				)
 			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
-			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
 			return
 		}
 
@@ -141,7 +141,7 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 			return
 		}
 
-		id, driverID, bookingID, partitionNo, err := bt.Get(token)
+		_, driverID, bookingID, partitionNo, err := bt.Get(token)
 		if err != nil {
 			log.Error().
 				Msgf(
@@ -154,7 +154,125 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 
 		ctx := r.Context()
 
-		ctx = context.WithValue(ctx, BookingTokenID, id)
+		ctx = context.WithValue(ctx, DriverID, driverID)
+		ctx = context.WithValue(ctx, BookingID, bookingID)
+		ctx = context.WithValue(ctx, PartitionNo, partitionNo)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+// ValidateDriverOrBookingToken used to validate the driver or booking token
+func ValidateDriverOrBookingToken(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		token := ""
+		unauthorizedErr := _errors.ErrUnauthorized
+
+		authorization := strings.Split(r.Header.Get("Authorization"), " ")
+		if len(authorization) == 2 {
+			token = authorization[1]
+		}
+
+		if token == "" {
+			log.Error().
+				Msgf(
+					"header: %v\tauthorization : %s\tfailed to get the driver token or the booking token",
+					r.Header.Clone(),
+					r.Header.Get("Authorization"),
+				)
+			http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		bt := tokens.NewBookingToken(e, c)
+		dt := tokens.NewDriverToken(e, c)
+		isBookingToken := true
+
+		isValid, tk := bt.Validate(r.Context(), token)
+		if !isValid {
+			isValid, tk = dt.Validate(token)
+			if !isValid {
+				log.Error().
+					Msgf("token : %s\tfailed to validate the token", token)
+				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			isBookingToken = false
+		}
+
+		var (
+			bookingID   string
+			driverID    int
+			partitionNo int
+			err         error
+		)
+
+		if isBookingToken {
+			_, driverID, bookingID, partitionNo, err = bt.Get(tk)
+			if err != nil {
+				log.Error().Err(err).
+					Msgf(
+						"booking_token : %s\tfailed to get the booking token details",
+						token,
+					)
+				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+				return
+			}
+		} else {
+			driverID, _, err = dt.Get(tk)
+			if err != nil {
+				log.Error().Err(err).
+					Msgf(
+						"driver_token : %s\tfailed to validate the booking token",
+						token,
+					)
+				http.Error(w, unauthorizedErr.Error(), http.StatusUnauthorized)
+				return
+			}
+
+			client := c.R.DB
+
+			val := client.Get(r.Context(), fmt.Sprint(driverID)).Val()
+			if val == "" {
+				log.Error().
+					Msgf(
+						"driver_token : %s\tfailed to get value from Redis",
+						token,
+					)
+				http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
+				return
+			}
+			payload := make([]string, 3)
+			err = sonic.UnmarshalString(val, &payload)
+			if err != nil {
+				log.Error().Err(err).
+					Msgf(
+						"driver_token : %s\tredis-value : %s\tfailed to parse the redis value",
+						token,
+						val,
+					)
+				http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			bookingID = payload[1]
+			partitionNo, err = strconv.Atoi(payload[2])
+			if err != nil {
+				log.Error().Err(err).
+					Msgf(
+						"driver_token : %s\tbooking_id : %s\tpartition : %s\tfailed to convert partition number to int",
+						token,
+						bookingID,
+						payload[2],
+					)
+				http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
+		ctx := r.Context()
+
 		ctx = context.WithValue(ctx, DriverID, driverID)
 		ctx = context.WithValue(ctx, BookingID, bookingID)
 		ctx = context.WithValue(ctx, PartitionNo, partitionNo)
