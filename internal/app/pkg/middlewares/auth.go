@@ -98,7 +98,12 @@ func IsDriver(next http.Handler, e *env.Env, c *connections.C) http.Handler {
 }
 
 // IsBookingTokenValid is a middleware that is used to check wether the booking token is valid or not
-func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+func IsBookingTokenValid(
+	next http.Handler,
+	e *env.Env,
+	c *connections.C,
+	validateRemote bool,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		bookingToken := ""
 		unauthorizedErr := _errors.ErrUnauthorized
@@ -130,7 +135,7 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 
 		bt := tokens.NewBookingToken(e, c)
 
-		isValid, token := bt.Validate(r.Context(), bookingToken)
+		isValid, token := bt.Validate(r.Context(), bookingToken, validateRemote)
 		if !isValid {
 			log.Error().
 				Msgf(
@@ -163,7 +168,11 @@ func IsBookingTokenValid(next http.Handler, e *env.Env, c *connections.C) http.H
 }
 
 // ValidateDriverOrBookingToken used to validate the driver or booking token
-func ValidateDriverOrBookingToken(next http.Handler, e *env.Env, c *connections.C) http.Handler {
+func ValidateDriverOrBookingToken(
+	next http.Handler,
+	e *env.Env,
+	c *connections.C,
+) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := ""
 		unauthorizedErr := _errors.ErrUnauthorized
@@ -188,7 +197,7 @@ func ValidateDriverOrBookingToken(next http.Handler, e *env.Env, c *connections.
 		dt := tokens.NewDriverToken(e, c)
 		isBookingToken := true
 
-		isValid, tk := bt.Validate(r.Context(), token)
+		isValid, tk := bt.Validate(r.Context(), token, true)
 		if !isValid {
 			isValid, tk = dt.Validate(token)
 			if !isValid {

@@ -120,6 +120,7 @@ func (bt *BookingToken) Create(
 func (bt *BookingToken) Validate(
 	ctx context.Context,
 	str string,
+	validateRemote bool,
 ) (isValid bool, token *jwt.Token) {
 	token, err := jwt.Parse(str, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -152,19 +153,21 @@ func (bt *BookingToken) Validate(
 		return false, nil
 	}
 
-	client := bt.C.R.DB
+	if validateRemote {
+		client := bt.C.R.DB
 
-	val := client.Get(ctx, fmt.Sprint(int(driverID))).Val()
-	if val == "" {
-		return false, nil
-	}
-	payload := make([]string, 3)
-	err = sonic.UnmarshalString(val, &payload)
-	if err != nil {
-		return false, nil
-	}
-	if payload[0] != id.String() {
-		return false, nil
+		val := client.Get(ctx, fmt.Sprint(int(driverID))).Val()
+		if val == "" {
+			return false, nil
+		}
+		payload := make([]string, 3)
+		err = sonic.UnmarshalString(val, &payload)
+		if err != nil {
+			return false, nil
+		}
+		if payload[0] != id.String() {
+			return false, nil
+		}
 	}
 
 	return true, token
