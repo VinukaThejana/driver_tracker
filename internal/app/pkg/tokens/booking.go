@@ -96,9 +96,13 @@ func (bt *BookingToken) Create(
 	if err != nil {
 		return "", err
 	}
+	driverDetails, err := sonic.MarshalString([]string{id.String(), bookingID, fmt.Sprint(partitionNo)})
+	if err != nil {
+		return "", err
+	}
 
 	pipe := bt.C.R.DB.Pipeline()
-	pipe.SetNX(ctx, fmt.Sprint(driverID), id.String(), duration)
+	pipe.SetNX(ctx, fmt.Sprint(driverID), driverDetails, duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
 	pipe.SetNX(ctx, lib.L(partitionNo), pickupStr, duration)
 	pipe.SetNX(ctx, lib.C(partitionNo), 0, duration)
@@ -151,7 +155,15 @@ func (bt *BookingToken) Validate(
 	client := bt.C.R.DB
 
 	val := client.Get(ctx, fmt.Sprint(int(driverID))).Val()
-	if val != id.String() {
+	if val == "" {
+		return false, nil
+	}
+	payload := make([]string, 3)
+	err = sonic.UnmarshalString(val, &payload)
+	if err != nil {
+		return false, nil
+	}
+	if payload[0] != id.String() {
 		return false, nil
 	}
 
