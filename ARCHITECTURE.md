@@ -17,6 +17,8 @@ mindmap
       Number of connections<br/><br />Contains the number of listners connected to the websocket connection
     DriverID
       Booking Token<br/><br />Contains the booking token that is used to send data to the given location stream
+      Booking ID<br /><br />The booking ID of the currently active booking under the driver
+      Partition Number<br /><br />The partitions number that listens to the given Booking ID
     Jobs
         This is a set that contains all the using partitions of the all the jobs that are happening in the given moment
 ```
