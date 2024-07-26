@@ -36,8 +36,8 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	partitionNo := payload[0]
-	driverID := payload[2]
+	partitionNo := payload[_lib.BookingIDPartitionNo]
+	driverID := payload[_lib.BookingIDDriverID]
 
 	pipe := client.Pipeline()
 
@@ -56,5 +56,11 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	lib.JSONResponse(w, http.StatusOK, "removed the current booking from redis")
 
-	go services.GenerateLog(e, c, payload, bookingID)
+	go services.GenerateLog(
+		e,
+		c,
+		bookingID,
+		payload[_lib.BookingIDPartitionNo],
+		int64(payload[_lib.BookingIDLastOffset]),
+	)
 }

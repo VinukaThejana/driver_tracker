@@ -165,7 +165,7 @@ func (bt *BookingToken) Validate(
 		if err != nil {
 			return false, nil
 		}
-		if payload[0] != id.String() {
+		if payload[lib.DriverIDDriverToken] != id.String() {
 			return false, nil
 		}
 	}

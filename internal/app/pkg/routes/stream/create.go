@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
@@ -270,7 +271,7 @@ func generate(
 	if err != nil {
 		return "", 0, err
 	}
-	partition := payload[0]
+	partition := payload[_lib.BookingIDPartitionNo]
 
 	bt := tokens.NewBookingToken(e, c)
 

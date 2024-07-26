@@ -12,15 +12,19 @@ import (
 )
 
 // GenerateLog is a function that is used to save the booking history of a particular booking
-func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) {
+func GenerateLog(
+	e *env.Env,
+	c *connections.C,
+	bookingID string,
+	partition int,
+	startOffset int64,
+) {
 	ctx := context.Background()
-	partition := payload[0]
 
 	Revalidate(e, []Paths{
 		Dashboard,
 	})
 
-	startOffset := int64(payload[1])
 	endOffset, err := c.GetLastOffset(ctx, e, e.Topic, partition)
 
 	free(ctx, c.R.DB, e.PartitionManagerKey, partition)
@@ -31,7 +35,7 @@ func GenerateLog(e *env.Env, c *connections.C, payload []int, bookingID string) 
 	}
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get the last offset")
-		log.Warn().Msgf("payload : %v", payload)
+		log.Warn().Msgf("partition : %d", partition)
 		return
 	}
 

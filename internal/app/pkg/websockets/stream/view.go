@@ -41,7 +41,7 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	partition := payload[0]
+	partition := payload[lib.BookingIDPartitionNo]
 	cKey := lib.C(partition)
 
 	val = client.Get(r.Context(), cKey).Val()

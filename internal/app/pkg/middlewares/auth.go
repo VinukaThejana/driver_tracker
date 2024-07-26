@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/bytedance/sonic"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/tokens"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -265,15 +266,15 @@ func ValidateDriverOrBookingToken(
 				return
 			}
 
-			bookingID = payload[1]
-			partitionNo, err = strconv.Atoi(payload[2])
+			bookingID = payload[lib.DriverIDBookingID]
+			partitionNo, err = strconv.Atoi(payload[lib.DriverIDPartitionNo])
 			if err != nil {
 				log.Error().Err(err).
 					Msgf(
 						"driver_token : %s\tbooking_id : %s\tpartition : %s\tfailed to convert partition number to int",
 						token,
 						bookingID,
-						payload[2],
+						payload[lib.DriverIDPartitionNo],
 					)
 				http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 				return

@@ -62,7 +62,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 					)
 				return
 			}
-			startOffset, err := strconv.Atoi(payload[1])
+			startOffset, err := strconv.Atoi(payload[lib.NLastOffset])
 			if err != nil {
 				log.Error().Err(err).
 					Msgf(
@@ -93,7 +93,13 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 					)
 			}
 
-			go services.GenerateLog(e, c, []int{partition, startOffset}, payload[0])
+			go services.GenerateLog(
+				e,
+				c,
+				payload[lib.NBookingID],
+				partition,
+				int64(startOffset),
+			)
 		}(job)
 	}
 

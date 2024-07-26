@@ -60,5 +60,11 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	})
 	lib.JSONResponse(w, http.StatusOK, "ended the session")
 
-	go services.GenerateLog(e, c, payload, bookingID)
+	go services.GenerateLog(
+		e,
+		c,
+		bookingID,
+		payload[_lib.BookingIDPartitionNo],
+		int64(_lib.BookingIDLastOffset),
+	)
 }
