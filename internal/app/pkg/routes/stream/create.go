@@ -54,8 +54,8 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	var driverID *int
 	var bookPickupAddr *string
 
-	// FIX: REMOVE THIS AS SOON AS THE DRIVER TOKEN IS STABALIZED
-	// otherwise this will cause the response time to be slow
+	// FIX: Add validation to validate the driver with the data that is obtained from the
+	// relational database
 	query := `
 SELECT
 	DriverPk,
@@ -87,36 +87,135 @@ WHERE
 	}
 
 	client := c.R.DB
-	ErrBookingAlreadyProcessing := fmt.Errorf("booking id that you provided is already processing, please use another booking id")
 
-	if val := client.Get(r.Context(), reqBody.BookingID).Val(); val != "" {
-		isDriver, err := isDriver(c, *driverID, reqBody.BookingID)
-		if err != nil || !isDriver {
-			log.Error().Err(err).Msg("failed to validate wether the driver owns the booking id")
-			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
-			return
-		}
-
-		token, ttl, err := generate(r.Context(), e, c, *driverID, reqBody.BookingID)
+	if val := client.Get(r.Context(), fmt.Sprint(*driverID)).Val(); val != "" {
+		payload := make([]string, 3)
+		err = sonic.UnmarshalString(val, &payload)
 		if err != nil {
-			log.Error().Err(err).Msg("failed to renew the booking token")
-			lib.JSONResponse(w, http.StatusConflict, ErrBookingAlreadyProcessing.Error())
+			log.Error().Err(err).
+				Msgf(
+					"driver_id : %d\tredis_value : %s\tbooking_id : %s\tfailed to unmarshal",
+					*driverID,
+					val,
+					reqBody.BookingID,
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 			return
 		}
 
-		http.SetCookie(w, &http.Cookie{
-			Name:     "booking_token",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			MaxAge:   e.BookingTokenExpires,
-			Expires:  time.Now().UTC().Add(ttl).UTC(),
-		})
+		bookingID := payload[_lib.DriverIDBookingID]
+		partition, err := strconv.Atoi(payload[_lib.DriverIDPartitionNo])
+		if err != nil {
+			log.Error().Err(err).
+				Msgf(
+					"driver_id : %d\tredis_value : %s\tbooking_id : %s\tpartition : %s\tfailed to unmarshal",
+					*driverID,
+					val,
+					reqBody.BookingID,
+					payload[_lib.DriverIDPartitionNo],
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+			return
+		}
 
-		lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
-			"booking_token": token,
-		})
-		return
+		if bookingID == reqBody.BookingID {
+			token, ttl, err := generate(
+				r.Context(),
+				e,
+				c,
+				*driverID,
+				partition,
+				reqBody.BookingID,
+			)
+			if err != nil {
+				log.Error().Err(err).
+					Msgf(
+						"booking_id : %s\tdriver_id : %d\tfailed to renew the booking token",
+						bookingID,
+						*driverID,
+					)
+				lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+				return
+			}
+
+			http.SetCookie(w, &http.Cookie{
+				Name:     "booking_token",
+				Value:    token,
+				Path:     "/",
+				HttpOnly: true,
+				MaxAge:   e.BookingTokenExpires,
+				Expires:  time.Now().UTC().Add(ttl).UTC(),
+			})
+
+			lib.JSONResponseWInterface(w, http.StatusOK, map[string]interface{}{
+				"booking_token": token,
+			})
+			return
+		}
+
+		val = client.Get(r.Context(), _lib.N(partition)).Val()
+		if val == "" {
+			log.Error().Err(err).
+				Msgf(
+					"booking_id : %s\tdriver_id : %d\tfailed to get the n- partition from redis",
+					bookingID,
+					*driverID,
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+			return
+		}
+		payload = make([]string, 2)
+		err = sonic.UnmarshalString(val, &payload)
+		if err != nil {
+			log.Error().Err(err).
+				Msgf(
+					"booking_id : %s\tdriver_id : %d\tfailed to parse n- partition",
+					bookingID,
+					*driverID,
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+			return
+		}
+		offset, err := strconv.Atoi(payload[_lib.NLastOffset])
+		if err != nil {
+			log.Error().Err(err).
+				Msgf(
+					"booking_id : %s\tdriver_id : %d\tredis_value : %s\tfailed to conver the offset to int",
+					bookingID,
+					*driverID,
+					val,
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+			return
+		}
+
+		pipe := client.Pipeline()
+
+		pipe.Del(r.Context(), fmt.Sprint(*driverID))
+		pipe.Del(r.Context(), bookingID)
+		pipe.Del(r.Context(), _lib.L(partition))
+		pipe.Del(r.Context(), _lib.C(partition))
+		pipe.Del(r.Context(), _lib.N(partition))
+
+		_, err = pipe.Exec(r.Context())
+		if err != nil {
+			log.Error().Err(err).
+				Msgf(
+					"booking_id : %s\tdriver_id : %d\tfailed to delete the keys in redis",
+					bookingID,
+					*driverID,
+				)
+			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
+			return
+		}
+
+		go services.GenerateLog(
+			e,
+			c,
+			bookingID,
+			partition,
+			int64(offset),
+		)
 	}
 
 	var available []int
@@ -225,53 +324,20 @@ WHERE
 	})
 }
 
-func isDriver(
-	c *connections.C,
-	driverID int,
-	bookingID string,
-) (isDriverOwned bool, err error) {
-	var pk *int
-	query := "SELECT DriverPk FROM Tbl_BookingDetails WHERE BookRefNo = @BookRefNo"
-
-	err = c.DB.QueryRow(query, sql.Named("BookRefNo", bookingID)).Scan(&pk)
-	if err != nil {
-		return false, err
-	}
-	if pk == nil {
-		return false, fmt.Errorf("failed to get the primary key of the driver")
-	}
-
-	if *pk != driverID {
-		return false, fmt.Errorf("the booking id does not belong to the driver")
-	}
-
-	return true, nil
-}
-
 func generate(
 	ctx context.Context,
 	e *env.Env,
 	c *connections.C,
-	driverID int,
+	driverID,
+	partition int,
 	bookingID string,
 ) (token string, ttl time.Duration, err error) {
 	client := c.R.DB
 
-	val := client.Get(ctx, fmt.Sprint(driverID)).Val()
-	if val == "" {
-		return "", 0, fmt.Errorf("the driver id in the redis database returned an empty value")
-	}
 	ttl = client.TTL(ctx, fmt.Sprint(driverID)).Val()
 	if ttl <= 0 {
 		return "", 0, fmt.Errorf("the ttl the previous booking token is smaller than 0")
 	}
-
-	payload := make([]int, 3)
-	err = sonic.UnmarshalString(client.Get(ctx, bookingID).Val(), &payload)
-	if err != nil {
-		return "", 0, err
-	}
-	partition := payload[_lib.BookingIDPartitionNo]
 
 	bt := tokens.NewBookingToken(e, c)
 
