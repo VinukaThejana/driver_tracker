@@ -83,7 +83,13 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 				return
 			}
 
-			err = client.Del(r.Context(), lib.N(job)).Err()
+			pipe := client.Pipeline()
+
+			pipe.Del(r.Context(), lib.N(job))
+			pipe.Del(r.Context(), lib.L(job))
+			pipe.Del(r.Context(), lib.C(job))
+
+			_, err = pipe.Exec(r.Context())
 			if err != nil {
 				log.Error().Err(err).
 					Msgf(
