@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/bytedance/sonic"
 	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
@@ -19,16 +18,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type reqV2 struct {
-	Heading  *float64 `json:"heading"`
-	Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
-	Location struct {
-		Accuracy *float64 `json:"accuracy"`
-		Lat      float64  `json:"lat" validate:"required,latitude"`
-		Lon      float64  `json:"lon" validate:"required,longitude"`
-	} `json:"location"`
-}
-
 // add is a route that is used to add data to the stream
 func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 7
@@ -36,12 +25,20 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 	defer r.Body.Close()
 
 	var (
-		data    reqV2
+		reqData struct {
+			Location struct {
+				Heading  *float64 `json:"heading"`
+				Accuracy *float64 `json:"accuracy"`
+				Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
+				Lat      float64  `json:"lat" validate:"required,latitude"`
+				Lon      float64  `json:"lon" validate:"required,longitude"`
+			} `json:"location" validate:"required"`
+		}
 		payload string
 		err     error
 	)
 
-	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
+	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqData)
 	if err != nil {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -59,11 +56,11 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 		return
 	}
 
-	if err = v.Struct(data); err != nil {
+	if err = v.Struct(reqData); err != nil {
 		log.Error().Err(err).
 			Msgf(
 				"body : %v\tfailed to validate the request body",
-				data,
+				reqData,
 			)
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBadRequest.Error())
 		return
@@ -71,7 +68,13 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	blob := blobV2(data)
+	blob := blob(req{
+		Lat:      reqData.Location.Lat,
+		Lon:      reqData.Location.Lon,
+		Heading:  reqData.Location.Heading,
+		Accuracy: reqData.Location.Accuracy,
+		Status:   reqData.Location.Status,
+	})
 
 	payload, err = sonic.MarshalString(blob)
 	if err != nil {
@@ -108,30 +111,4 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 			driverID,
 		)
 	lib.JSONResponse(w, http.StatusOK, "added")
-}
-
-func blobV2(payload reqV2) map[string]any {
-	return map[string]any{
-		"lat": payload.Location.Lat,
-		"lon": payload.Location.Lon,
-		"heading": func() float64 {
-			if payload.Heading == nil {
-				return 0
-			}
-			return *payload.Heading
-		}(),
-		"accuracy": func() float64 {
-			if payload.Location.Accuracy == nil {
-				return -1
-			}
-			return *payload.Location.Accuracy
-		}(),
-		"status": func() int {
-			if payload.Status == nil {
-				return int(_lib.DefaultStatus)
-			}
-			return int(*payload.Status)
-		}(),
-		"timestamp": time.Now().UTC().Unix(),
-	}
 }
