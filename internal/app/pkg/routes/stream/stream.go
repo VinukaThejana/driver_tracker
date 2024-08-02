@@ -36,6 +36,9 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 			)
 		})
 		r.Use(middlewares.IsContentJSON)
+		r.Post("/dev", func(w http.ResponseWriter, r *http.Request) {
+			addDev(w, r, e, c)
+		})
 		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 			add(w, r, e, c)
 		})
