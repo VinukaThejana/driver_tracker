@@ -19,7 +19,7 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type reqDev struct {
+type reqV2 struct {
 	Heading  *float64 `json:"heading"`
 	Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
 	Location struct {
@@ -30,13 +30,13 @@ type reqDev struct {
 }
 
 // add is a route that is used to add data to the stream
-func addDev(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
+func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 7
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
 	var (
-		data    reqDev
+		data    reqV2
 		payload string
 		err     error
 	)
@@ -71,7 +71,7 @@ func addDev(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	blob := blobDev(data)
+	blob := blobV2(data)
 
 	payload, err = sonic.MarshalString(blob)
 	if err != nil {
@@ -110,7 +110,7 @@ func addDev(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C
 	lib.JSONResponse(w, http.StatusOK, "added")
 }
 
-func blobDev(payload reqDev) map[string]any {
+func blobV2(payload reqV2) map[string]any {
 	return map[string]any{
 		"lat": payload.Location.Lat,
 		"lon": payload.Location.Lon,
