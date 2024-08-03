@@ -20,7 +20,7 @@ import (
 
 // add is a route that is used to add data to the stream
 func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
-	const maxRequestBodySize = 1 << 7
+	const maxRequestBodySize = 1 << 8
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
