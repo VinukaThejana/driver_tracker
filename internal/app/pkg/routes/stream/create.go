@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	ers "errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -21,18 +22,24 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	lockDuration = 2 * time.Second
-	timeout      = 5 * time.Second
-)
-
-type body struct {
-	BookingID string `json:"booking_id" validate:"required,min=1"`
-}
-
 // Create is a route that is used to create a new stream for the given booking id
 func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
-	const maxRequestBodySize = 1 << 20
+	const (
+		// Below variables are used to lock the partition manager until a proper partition is chosen
+		// for the job creation
+		//
+		// The time for which the partition manager will be locked
+		lockDuration = 2 * time.Second
+		// The maximum time that another request will be wating till the partition manager is freed
+		// before timeout
+		timeout = 3 * time.Second
+
+		maxRequestBodySize = 1 << 6
+	)
+
+	type body struct {
+		BookingID string `json:"booking_id" validate:"required,min=1"`
+	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
@@ -40,7 +47,21 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	var reqBody body
 	v := validator.New()
 
-	if err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+	err := sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			log.Error().Err(err).
+				Msg("failed to read the request body")
+			lib.JSONResponse(w, http.StatusRequestEntityTooLarge, errors.ErrBookingIDNotValid.Error())
+			return
+		}
+
+		log.Error().Err(err).
+			Msgf(
+				"raw_body : %s\tfailed to read the request body",
+				string(body),
+			)
 		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
 	}
@@ -54,8 +75,6 @@ func create(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C
 	var driverID *int
 	var bookPickupAddr *string
 
-	// FIX: Add validation to validate the driver with the data that is obtained from the
-	// relational database
 	query := `
 SELECT
 	DriverPk,
@@ -66,7 +85,7 @@ WHERE
 	BookRefNo = @BookRefNo;
 `
 
-	err := c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID, &bookPickupAddr)
+	err = c.DB.QueryRow(query, sql.Named("BookRefNo", reqBody.BookingID)).Scan(&driverID, &bookPickupAddr)
 	if err != nil || driverID == nil {
 		log.Error().Err(err).
 			Msgf(
@@ -119,7 +138,7 @@ WHERE
 		}
 
 		if bookingID == reqBody.BookingID {
-			token, ttl, err := generate(
+			token, ttl, err := renewBookingToken(
 				r.Context(),
 				e,
 				c,
@@ -288,16 +307,15 @@ WHERE
 	}
 	newOffset := int(lastOffset) + 1
 
-	payload, err := sonic.MarshalString(_lib.SetBookingID(partition, newOffset, *driverID))
-	if err != nil {
-		log.Error().Err(err).Msg("failed to marshal the interface")
-		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
-		return
-	}
-
 	bt := tokens.NewBookingToken(e, c)
 
-	token, err := bt.Create(r.Context(), *driverID, reqBody.BookingID, partition, newOffset, payload, pickups[0])
+	token, err := bt.Create(r.Context(), tokens.BookingTokenOpts{
+		DriverID:         *driverID,
+		BookingID:        reqBody.BookingID,
+		Partition:        partition,
+		NewOffset:        newOffset,
+		PickupCordinates: pickups[0],
+	})
 	if err != nil {
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
@@ -324,7 +342,7 @@ WHERE
 	})
 }
 
-func generate(
+func renewBookingToken(
 	ctx context.Context,
 	e *env.Env,
 	c *connections.C,

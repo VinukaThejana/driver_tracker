@@ -20,6 +20,15 @@ type BookingToken struct {
 	E *env.Env
 }
 
+// BookingTokenOpts contains the details that are required to create a booking token
+type BookingTokenOpts struct {
+	BookingID        string
+	DriverID         int
+	Partition        int
+	NewOffset        int
+	PickupCordinates services.Geo
+}
+
 // NewBookingToken is a function that is used to create a new booking token instance
 func NewBookingToken(e *env.Env, c *connections.C) *BookingToken {
 	return &BookingToken{
@@ -63,31 +72,26 @@ func (bt *BookingToken) Createtoken(
 // Create is a function that is used to create the booking token
 func (bt *BookingToken) Create(
 	ctx context.Context,
-	driverID int,
-	bookingID string,
-	partitionNo int,
-	newOffset int,
-	payload string,
-	pickup services.Geo,
+	opts BookingTokenOpts,
 ) (token string, err error) {
 	duration, err := time.ParseDuration(fmt.Sprintf("%ds", bt.E.BookingTokenExpires))
 	if err != nil {
 		return "", err
 	}
 
-	nPayload, err := sonic.MarshalString(_lib.SetN(bookingID, newOffset))
+	nPayload, err := sonic.MarshalString(_lib.SetN(opts.BookingID, opts.NewOffset))
 	if err != nil {
 		return "", err
 	}
 
-	id, token, err := bt.Createtoken(driverID, partitionNo, bookingID, duration)
+	id, token, err := bt.Createtoken(opts.DriverID, opts.Partition, opts.BookingID, duration)
 	if err != nil {
 		return "", err
 	}
 
 	pickupStr, err := sonic.MarshalString(map[string]any{
-		"lat":       pickup.Lat,
-		"lon":       pickup.Lon,
+		"lat":       opts.PickupCordinates.Lat,
+		"lon":       opts.PickupCordinates.Lon,
 		"heading":   0,
 		"accuracy":  -1,
 		"status":    _lib.DefaultStatus,
@@ -96,17 +100,21 @@ func (bt *BookingToken) Create(
 	if err != nil {
 		return "", err
 	}
-	driverDetails, err := sonic.MarshalString(_lib.SetDriverID(id.String(), bookingID, partitionNo))
+	driverDetails, err := sonic.MarshalString(_lib.SetDriverID(id.String(), opts.BookingID, opts.Partition))
+	if err != nil {
+		return "", err
+	}
+	bookingDetails, err := sonic.MarshalString(_lib.SetBookingID(opts.Partition, opts.NewOffset, opts.DriverID))
 	if err != nil {
 		return "", err
 	}
 
 	pipe := bt.C.R.DB.Pipeline()
-	pipe.SetNX(ctx, fmt.Sprint(driverID), driverDetails, duration)
-	pipe.SetNX(ctx, bookingID, payload, duration)
-	pipe.SetNX(ctx, _lib.L(partitionNo), pickupStr, duration)
-	pipe.SetNX(ctx, _lib.C(partitionNo), 0, duration)
-	pipe.SetNX(ctx, _lib.N(partitionNo), nPayload, duration+12*time.Hour)
+	pipe.SetNX(ctx, fmt.Sprint(opts.DriverID), driverDetails, duration)
+	pipe.SetNX(ctx, opts.BookingID, bookingDetails, duration)
+	pipe.SetNX(ctx, _lib.L(opts.Partition), pickupStr, duration)
+	pipe.SetNX(ctx, _lib.C(opts.Partition), 0, duration)
+	pipe.SetNX(ctx, _lib.N(opts.Partition), nPayload, duration+12*time.Hour)
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
