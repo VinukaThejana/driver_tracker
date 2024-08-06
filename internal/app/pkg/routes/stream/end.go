@@ -65,6 +65,6 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		c,
 		bookingID,
 		payload[_lib.BookingIDPartitionNo],
-		int64(_lib.BookingIDLastOffset),
+		int64(payload[_lib.BookingIDLastOffset]),
 	)
 }

@@ -20,14 +20,13 @@ func GenerateLog(
 	startOffset int64,
 ) {
 	ctx := context.Background()
+	defer free(ctx, c.R.DB, e.PartitionManagerKey, partition)
 
 	Revalidate(e, []Paths{
 		Dashboard,
 	})
 
 	endOffset, err := c.GetLastOffset(ctx, e, e.Topic, partition)
-
-	free(ctx, c.R.DB, e.PartitionManagerKey, partition)
 
 	if startOffset >= endOffset {
 		log.Warn().Msg("no messages in the given partition")
