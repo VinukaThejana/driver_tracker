@@ -26,13 +26,7 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 
 	var (
 		reqData struct {
-			Location struct {
-				Heading  *float64 `json:"heading"`
-				Accuracy *float64 `json:"accuracy"`
-				Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
-				Lat      float64  `json:"lat" validate:"required,latitude"`
-				Lon      float64  `json:"lon" validate:"required,longitude"`
-			} `json:"location" validate:"required"`
+			Location req `json:"location" validate:"required"`
 		}
 		payload string
 		err     error
