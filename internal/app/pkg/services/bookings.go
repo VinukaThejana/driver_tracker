@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/bytedance/sonic"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
-	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
@@ -20,7 +20,7 @@ func GenerateLog(
 	startOffset int64,
 ) {
 	ctx := context.Background()
-	defer free(ctx, c.R.DB, e.PartitionManagerKey, partition)
+	defer _lib.Free(ctx, c.R.DB, e.PartitionManagerKey, partition)
 
 	Revalidate(e, []Paths{
 		Dashboard,
@@ -81,17 +81,5 @@ func GenerateLog(
 			Err(err).
 			Msg("failed to write the messages to the google cloud storage")
 		return
-	}
-}
-
-// deallocate the used partition for upcomming jobs
-func free(ctx context.Context, client *redis.Client, key string, partition int) {
-	err := client.SRem(ctx, key, partition).Err()
-	if err != nil {
-		log.Error().Err(err).
-			Msgf(
-				"partition : %d\tfailed to remove the partition",
-				partition,
-			)
 	}
 }
