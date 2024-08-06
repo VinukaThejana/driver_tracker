@@ -29,15 +29,23 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 			if val != "" {
 				return
 			}
+			client.Del(r.Context(), _lib.L(job))
 
 			val = client.Get(r.Context(), _lib.N(job)).Val()
 			if val == "" {
-				log.Warn().
-					Msgf(
-						"job : %s\tredis-value : %s\tthe job cannot be found with n- partitions",
-						job,
-						val,
-					)
+				partition, err := strconv.Atoi(job)
+				msg := fmt.Sprintf(
+					"job : %s\tredis-value : %s\tthe job cannot be found with n- partitions",
+					job,
+					val,
+				)
+				if err == nil {
+					log.Warn().Msg(msg)
+					_lib.Free(r.Context(), client, e.PartitionManagerKey, partition)
+					return
+				}
+
+				log.Error().Msg(msg)
 				return
 			}
 
