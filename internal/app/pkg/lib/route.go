@@ -17,3 +17,14 @@ func WrapHandler(
 		h(w, r, e, c)
 	}
 }
+
+// WrapMiddleware is used to simplify middlewares
+func WrapMiddleware(
+	m func(http.Handler, *env.Env, *connections.C) http.Handler,
+	e *env.Env,
+	c *connections.C,
+) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return m(h, e, c)
+	}
+}
