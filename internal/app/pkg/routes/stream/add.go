@@ -29,39 +29,48 @@ type req struct {
 
 // add is a route that is used to add data to the stream
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
-	const maxRequestBodySize = 1 << 7
+	const maxRequestBodySize = 1 << 8
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodySize)
 	defer r.Body.Close()
 
 	var (
-		data    req
+		reqData struct {
+			Location struct {
+				Heading  *float64 `json:"heading"`
+				Accuracy *float64 `json:"accuracy"`
+				Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
+				Lat      float64  `json:"lat" validate:"required,latitude"`
+				Lon      float64  `json:"lon" validate:"required,longitude"`
+			} `json:"location" validate:"required"`
+		}
 		payload string
 		err     error
 	)
 
-	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&data)
+	err = sonic.ConfigDefault.NewDecoder(r.Body).Decode(&reqData)
 	if err != nil {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
 			log.Error().Err(err).
 				Msg("failed to read the request body")
-		} else {
-			log.Error().Err(err).
-				Msgf(
-					"raw_body : %s\tfailed to read the request body",
-					string(body),
-				)
+			lib.JSONResponse(w, http.StatusRequestEntityTooLarge, errors.ErrBadRequest.Error())
+			return
 		}
+		log.Error().Err(err).
+			Msgf(
+				"raw_body : %s\tfailed to read the request body",
+				string(body),
+			)
 
 		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
 	}
 
-	if err = v.Struct(data); err != nil {
+	if err = v.Struct(reqData); err != nil {
 		log.Error().Err(err).
 			Msgf(
 				"body : %v\tfailed to validate the request body",
-				data,
+				reqData,
 			)
 		lib.JSONResponse(w, http.StatusBadRequest, errors.ErrBadRequest.Error())
 		return
@@ -69,7 +78,13 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	blob := blob(data)
+	blob := blob(req{
+		Lat:      reqData.Location.Lat,
+		Lon:      reqData.Location.Lon,
+		Heading:  reqData.Location.Heading,
+		Accuracy: reqData.Location.Accuracy,
+		Status:   reqData.Location.Status,
+	})
 
 	payload, err = sonic.MarshalString(blob)
 	if err != nil {
