@@ -1,7 +1,6 @@
 package jobs
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/bytedance/sonic"
@@ -39,15 +38,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 	partitionNo := BookingID[_lib.BookingIDPartitionNo]
 	driverID := BookingID[_lib.BookingIDDriverID]
 
-	pipe := client.Pipeline()
-
-	pipe.Del(r.Context(), bookingID)
-	pipe.Del(r.Context(), fmt.Sprint(driverID))
-	pipe.Del(r.Context(), _lib.L(partitionNo))
-	pipe.Del(r.Context(), _lib.N(partitionNo))
-	pipe.Del(r.Context(), _lib.C(partitionNo))
-
-	_, err = pipe.Exec(r.Context())
+	err = _lib.DelBooking(r.Context(), client, driverID, bookingID, partitionNo)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to peform redis actions")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())

@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -36,15 +35,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		return
 	}
 
-	pipe := client.Pipeline()
-
-	pipe.Del(r.Context(), bookingID)
-	pipe.Del(r.Context(), fmt.Sprint(driverID))
-	pipe.Del(r.Context(), _lib.L(partitionNo))
-	pipe.Del(r.Context(), _lib.N(partitionNo))
-	pipe.Del(r.Context(), _lib.C(partitionNo))
-
-	_, err = pipe.Exec(r.Context())
+	err = _lib.DelBooking(r.Context(), client, driverID, bookingID, partitionNo)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to end the session")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())

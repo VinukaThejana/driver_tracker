@@ -208,15 +208,7 @@ WHERE
 			return
 		}
 
-		pipe := client.Pipeline()
-
-		pipe.Del(r.Context(), fmt.Sprint(*driverID))
-		pipe.Del(r.Context(), bookingID)
-		pipe.Del(r.Context(), _lib.L(partition))
-		pipe.Del(r.Context(), _lib.C(partition))
-		pipe.Del(r.Context(), _lib.N(partition))
-
-		_, err = pipe.Exec(r.Context())
+		err = _lib.DelBooking(r.Context(), client, *driverID, bookingID, partition)
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
