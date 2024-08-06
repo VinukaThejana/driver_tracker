@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/redis/go-redis/v9"
+	"github.com/rs/zerolog/log"
 )
 
 // RedisBookingID is used to represent the booking in Redis
@@ -151,4 +152,16 @@ func DelBooking(
 	}
 
 	return nil
+}
+
+// Free is used to deallocate the used partition for upcomming jobs
+func Free(ctx context.Context, client *redis.Client, key string, partition int) {
+	err := client.SRem(ctx, key, partition).Err()
+	if err != nil {
+		log.Error().Err(err).
+			Msgf(
+				"partition : %d\tfailed to remove the partition",
+				partition,
+			)
+	}
 }
