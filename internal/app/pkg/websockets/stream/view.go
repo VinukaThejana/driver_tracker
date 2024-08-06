@@ -34,14 +34,14 @@ func view(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) 
 		http.Error(w, "provide a valid booking id", http.StatusBadRequest)
 		return
 	}
-	payload := make([]int, 2)
-	err := sonic.UnmarshalString(val, &payload)
+	BookingID := lib.NewBookingID()
+	err := sonic.UnmarshalString(val, &BookingID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
 		http.Error(w, _errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	partition := payload[lib.BookingIDPartitionNo]
+	partition := BookingID[lib.BookingIDPartitionNo]
 	cKey := lib.C(partition)
 
 	val = client.Get(r.Context(), cKey).Val()

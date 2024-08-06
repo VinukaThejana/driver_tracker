@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -25,12 +25,12 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 		go func(job string) {
 			defer wg.Done()
 
-			val := client.Get(r.Context(), lib.C(job)).Val()
+			val := client.Get(r.Context(), _lib.C(job)).Val()
 			if val != "" {
 				return
 			}
 
-			val = client.Get(r.Context(), lib.N(job)).Val()
+			val = client.Get(r.Context(), _lib.N(job)).Val()
 			if val == "" {
 				log.Warn().
 					Msgf(
@@ -41,8 +41,8 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 				return
 			}
 
-			var payload []string
-			err := sonic.UnmarshalString(val, &payload)
+			N := _lib.NewN()
+			err := sonic.UnmarshalString(val, &N)
 			if err != nil {
 				log.Error().Err(err).
 					Msgf(
@@ -52,17 +52,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 					)
 				return
 			}
-			if len(payload) != 2 {
-				log.Error().Err(fmt.Errorf("the payload did not contains the booking ID and the offset")).
-					Msgf(
-						"job : %s\tredis-value : %s\tpayload : %v\tthe payload in n- partition is not equal to two",
-						job,
-						val,
-						payload,
-					)
-				return
-			}
-			startOffset, err := strconv.Atoi(payload[lib.NLastOffset])
+			startOffset, err := strconv.Atoi(N[_lib.NLastOffset])
 			if err != nil {
 				log.Error().Err(err).
 					Msgf(
@@ -85,9 +75,9 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 
 			pipe := client.Pipeline()
 
-			pipe.Del(r.Context(), lib.N(job))
-			pipe.Del(r.Context(), lib.L(job))
-			pipe.Del(r.Context(), lib.C(job))
+			pipe.Del(r.Context(), _lib.N(job))
+			pipe.Del(r.Context(), _lib.L(job))
+			pipe.Del(r.Context(), _lib.C(job))
 
 			_, err = pipe.Exec(r.Context())
 			if err != nil {
@@ -102,7 +92,7 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 			go services.GenerateLog(
 				e,
 				c,
-				payload[lib.NBookingID],
+				N[_lib.NBookingID],
 				partition,
 				int64(startOffset),
 			)

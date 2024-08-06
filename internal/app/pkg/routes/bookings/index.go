@@ -71,9 +71,9 @@ func getBookingID(ctx context.Context, e *env.Env, client *redis.Client, job str
 		return ""
 	}
 
-	var payload []string
-	err := sonic.UnmarshalString(val, &payload)
-	if err != nil || len(payload) != 2 {
+	N := _lib.NewN()
+	err := sonic.UnmarshalString(val, &N)
+	if err != nil || len(N) != 2 {
 		log.Error().Err(err).
 			Msgf(
 				"job : %s\tpayload : %v\tfailed to unmarshal the job with n-",
@@ -83,5 +83,5 @@ func getBookingID(ctx context.Context, e *env.Env, client *redis.Client, job str
 		return ""
 	}
 
-	return payload[0]
+	return N[0]
 }

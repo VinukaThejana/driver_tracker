@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -75,7 +75,7 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
-	nPayload, err := sonic.MarshalString([]string{bookingID, fmt.Sprint(newOffset)})
+	nPayload, err := sonic.MarshalString(_lib.SetN(bookingID, newOffset))
 	if err != nil {
 		return "", err
 	}
@@ -90,13 +90,13 @@ func (bt *BookingToken) Create(
 		"lon":       pickup.Lon,
 		"heading":   0,
 		"accuracy":  -1,
-		"status":    lib.DefaultStatus,
+		"status":    _lib.DefaultStatus,
 		"timestamp": time.Now().UTC().Unix(),
 	})
 	if err != nil {
 		return "", err
 	}
-	driverDetails, err := sonic.MarshalString([]string{id.String(), bookingID, fmt.Sprint(partitionNo)})
+	driverDetails, err := sonic.MarshalString(_lib.SetDriverID(id.String(), bookingID, partitionNo))
 	if err != nil {
 		return "", err
 	}
@@ -104,9 +104,9 @@ func (bt *BookingToken) Create(
 	pipe := bt.C.R.DB.Pipeline()
 	pipe.SetNX(ctx, fmt.Sprint(driverID), driverDetails, duration)
 	pipe.SetNX(ctx, bookingID, payload, duration)
-	pipe.SetNX(ctx, lib.L(partitionNo), pickupStr, duration)
-	pipe.SetNX(ctx, lib.C(partitionNo), 0, duration)
-	pipe.SetNX(ctx, lib.N(partitionNo), nPayload, duration+12*time.Hour)
+	pipe.SetNX(ctx, _lib.L(partitionNo), pickupStr, duration)
+	pipe.SetNX(ctx, _lib.C(partitionNo), 0, duration)
+	pipe.SetNX(ctx, _lib.N(partitionNo), nPayload, duration+12*time.Hour)
 
 	_, err = pipe.Exec(ctx)
 	if err != nil {
@@ -160,12 +160,12 @@ func (bt *BookingToken) Validate(
 		if val == "" {
 			return false, nil
 		}
-		payload := make([]string, 3)
-		err = sonic.UnmarshalString(val, &payload)
+		DriverID := _lib.NewDriverID()
+		err = sonic.UnmarshalString(val, &DriverID)
 		if err != nil {
 			return false, nil
 		}
-		if payload[lib.DriverIDDriverToken] != id.String() {
+		if DriverID[_lib.DriverIDDriverToken] != id.String() {
 			return false, nil
 		}
 	}

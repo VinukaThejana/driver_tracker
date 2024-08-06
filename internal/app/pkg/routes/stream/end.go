@@ -24,13 +24,13 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 
 	client := c.R.DB
 
-	payload := make([]int, 3)
-	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &payload)
+	BookingID := _lib.NewBookingID()
+	err := sonic.UnmarshalString(c.R.DB.Get(r.Context(), bookingID).Val(), &BookingID)
 	if err != nil {
 		log.Error().Err(err).
 			Msgf(
 				"payload : %v\tfailed to backup the job",
-				payload,
+				BookingID,
 			)
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 		return
@@ -64,7 +64,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		e,
 		c,
 		bookingID,
-		payload[_lib.BookingIDPartitionNo],
-		int64(payload[_lib.BookingIDLastOffset]),
+		BookingID[_lib.BookingIDPartitionNo],
+		int64(BookingID[_lib.BookingIDLastOffset]),
 	)
 }

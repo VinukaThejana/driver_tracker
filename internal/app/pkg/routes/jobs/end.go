@@ -29,15 +29,15 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		lib.JSONResponse(w, http.StatusBadRequest, "provided booking id is not valid")
 		return
 	}
-	payload := make([]int, 3)
-	err := sonic.UnmarshalString(val, &payload)
+	BookingID := _lib.NewBookingID()
+	err := sonic.UnmarshalString(val, &BookingID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to unmarshal the value from Redis")
 		http.Error(w, errors.ErrServer.Error(), http.StatusInternalServerError)
 		return
 	}
-	partitionNo := payload[_lib.BookingIDPartitionNo]
-	driverID := payload[_lib.BookingIDDriverID]
+	partitionNo := BookingID[_lib.BookingIDPartitionNo]
+	driverID := BookingID[_lib.BookingIDDriverID]
 
 	pipe := client.Pipeline()
 
@@ -60,7 +60,7 @@ func end(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections.C) {
 		e,
 		c,
 		bookingID,
-		payload[_lib.BookingIDPartitionNo],
-		int64(payload[_lib.BookingIDLastOffset]),
+		BookingID[_lib.BookingIDPartitionNo],
+		int64(BookingID[_lib.BookingIDLastOffset]),
 	)
 }

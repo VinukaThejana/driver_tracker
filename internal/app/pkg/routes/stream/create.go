@@ -89,8 +89,8 @@ WHERE
 	client := c.R.DB
 
 	if val := client.Get(r.Context(), fmt.Sprint(*driverID)).Val(); val != "" {
-		payload := make([]string, 3)
-		err = sonic.UnmarshalString(val, &payload)
+		DriverID := _lib.NewDriverID()
+		err = sonic.UnmarshalString(val, &DriverID)
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
@@ -103,8 +103,8 @@ WHERE
 			return
 		}
 
-		bookingID := payload[_lib.DriverIDBookingID]
-		partition, err := strconv.Atoi(payload[_lib.DriverIDPartitionNo])
+		bookingID := DriverID[_lib.DriverIDBookingID]
+		partition, err := strconv.Atoi(DriverID[_lib.DriverIDPartitionNo])
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
@@ -112,7 +112,7 @@ WHERE
 					*driverID,
 					val,
 					reqBody.BookingID,
-					payload[_lib.DriverIDPartitionNo],
+					DriverID[_lib.DriverIDPartitionNo],
 				)
 			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 			return
@@ -164,8 +164,8 @@ WHERE
 			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 			return
 		}
-		payload = make([]string, 2)
-		err = sonic.UnmarshalString(val, &payload)
+		N := _lib.NewN()
+		err = sonic.UnmarshalString(val, &N)
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
@@ -176,7 +176,7 @@ WHERE
 			lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
 			return
 		}
-		offset, err := strconv.Atoi(payload[_lib.NLastOffset])
+		offset, err := strconv.Atoi(N[_lib.NLastOffset])
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
@@ -288,7 +288,7 @@ WHERE
 	}
 	newOffset := int(lastOffset) + 1
 
-	payload, err := sonic.MarshalString([]int{partition, newOffset, *driverID})
+	payload, err := sonic.MarshalString(_lib.SetBookingID(partition, newOffset, *driverID))
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the interface")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
@@ -351,7 +351,7 @@ func generate(
 		return "", 0, err
 	}
 
-	driverDetails, err := sonic.MarshalString([]string{id.String(), bookingID, fmt.Sprint(partition)})
+	driverDetails, err := sonic.MarshalString(_lib.SetDriverID(id.String(), bookingID, partition))
 	if err != nil {
 		return "", 0, err
 	}
