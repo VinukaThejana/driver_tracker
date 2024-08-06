@@ -44,7 +44,9 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	upgrader.OnMessage(func(_ *websocket.Conn, _ websocket.MessageType, b []byte) {
 		var (
-			data    req
+			data struct {
+				Location req `json:"location" validate:"required"`
+			}
 			payload string
 			err     error
 		)
@@ -62,7 +64,13 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			return
 		}
 
-		payload, err = sonic.MarshalString(blob(data))
+		payload, err = sonic.MarshalString(blob(req{
+			Lat:      data.Location.Lat,
+			Lon:      data.Location.Lon,
+			Status:   data.Location.Status,
+			Accuracy: data.Location.Accuracy,
+			Heading:  data.Location.Heading,
+		}))
 		if err != nil {
 			log.Error().Err(err).
 				Msgf(
