@@ -4,6 +4,7 @@ package stream
 import (
 	"net/http"
 
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
@@ -11,48 +12,34 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-var v = validator.New()
+var (
+	v = validator.New()
+	h = lib.WrapHandler
+	m = lib.WrapMiddleware
+)
 
 // Router a route group that contains all the routes that are related to stream
 func Router(e *env.Env, c *connections.C) http.Handler {
 	r := chi.NewRouter()
+
 	r.Route("/create", func(r chi.Router) {
 		r.Use(middlewares.IsContentJSON)
-		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsDriver(h, e, c)
-		})
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			create(w, r, e, c)
-		})
+		r.Use(m(middlewares.IsDriver, e, c))
+		r.Post("/", h(create, e, c))
 	})
 
 	r.Route("/add", func(r chi.Router) {
-		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.IsBookingTokenValid(
-				h,
-				e,
-				c,
-				false,
-			)
-		})
 		r.Use(middlewares.IsContentJSON)
-		r.Post("/v2", func(w http.ResponseWriter, r *http.Request) {
-			addV2(w, r, e, c)
-		})
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-			add(w, r, e, c)
-		})
+		r.Use(m(func(h http.Handler, e *env.Env, c *connections.C) http.Handler {
+			return middlewares.IsBookingTokenValid(h, e, c, false)
+		}, e, c))
+		r.Post("/", h(add, e, c))
+		r.Post("/v2", h(addV2, e, c))
 	})
+
 	r.Route("/end", func(r chi.Router) {
-		r.Use(func(h http.Handler) http.Handler {
-			return middlewares.ValidateDriverOrBookingToken(h,
-				e,
-				c,
-			)
-		})
-		r.Delete("/", func(w http.ResponseWriter, r *http.Request) {
-			end(w, r, e, c)
-		})
+		r.Use(m(middlewares.ValidateDriverOrBookingToken, e, c))
+		r.Delete("/", h(end, e, c))
 	})
 
 	return r
