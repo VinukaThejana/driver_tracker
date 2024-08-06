@@ -44,13 +44,14 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 		if err != nil {
 			log.Error().Err(err).
 				Msg("failed to read the request body")
-		} else {
-			log.Error().Err(err).
-				Msgf(
-					"raw_body : %s\tfailed to read the request body",
-					string(body),
-				)
+			lib.JSONResponse(w, http.StatusRequestEntityTooLarge, errors.ErrBadRequest.Error())
+			return
 		}
+		log.Error().Err(err).
+			Msgf(
+				"raw_body : %s\tfailed to read the request body",
+				string(body),
+			)
 
 		lib.JSONResponse(w, http.StatusUnsupportedMediaType, errors.ErrUnsuportedMedia.Error())
 		return
