@@ -1,6 +1,11 @@
 package lib
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+
+	"github.com/redis/go-redis/v9"
+)
 
 // RedisBookingID is used to represent the booking in Redis
 type RedisBookingID int
@@ -121,4 +126,29 @@ func SetDriverID(
 	DriverID[DriverIDPartitionNo] = fmt.Sprint(partitionNo)
 
 	return DriverID
+}
+
+// DelBooking is a function that is used to remove a booking and all its related components
+// from the redis database
+func DelBooking(
+	ctx context.Context,
+	client *redis.Client,
+	driverID int,
+	bookingID string,
+	partition int,
+) error {
+	pipe := client.Pipeline()
+
+	pipe.Del(ctx, fmt.Sprint(driverID))
+	pipe.Del(ctx, bookingID)
+	pipe.Del(ctx, L(partition))
+	pipe.Del(ctx, C(partition))
+	pipe.Del(ctx, N(partition))
+
+	_, err := pipe.Exec(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
