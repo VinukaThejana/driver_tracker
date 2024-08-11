@@ -156,7 +156,10 @@ func DelBooking(
 
 // Free is used to deallocate the used partition for upcomming jobs
 func Free(ctx context.Context, client *redis.Client, key string, partition int) {
-	err := client.SRem(ctx, key, partition).Err()
+	pipe := client.Pipeline()
+	pipe.Del(ctx, L(partition))
+	pipe.SRem(ctx, key, partition)
+	_, err := pipe.Exec(ctx)
 	if err != nil {
 		log.Error().Err(err).
 			Msgf(
