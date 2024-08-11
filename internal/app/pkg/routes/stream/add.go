@@ -87,14 +87,16 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		return
 	}
 
-	err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
-	if err != nil {
-		log.Error().Err(err).
-			Msgf(
-				"payload : %s\tfailed to set the live location",
-				payload,
-			)
-	}
+	go func(payload string) {
+		err = c.R.DB.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL).Err()
+		if err != nil {
+			log.Error().Err(err).
+				Msgf(
+					"payload : %s\tfailed to set the live location",
+					payload,
+				)
+		}
+	}(payload)
 
 	writer := c.K.B
 	writer.Balancer = kafka.BalancerFunc(func(m kafka.Message, i ...int) int {
