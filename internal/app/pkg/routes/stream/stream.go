@@ -31,7 +31,7 @@ func Router(e *env.Env, c *connections.C) http.Handler {
 	r.Route("/add", func(r chi.Router) {
 		r.Use(middlewares.IsContentJSON)
 		r.Use(m(func(h http.Handler, e *env.Env, c *connections.C) http.Handler {
-			return middlewares.IsBookingTokenValid(h, e, c, false)
+			return middlewares.IsBookingTokenValid(h, e, c, true)
 		}, e, c))
 		r.Post("/", h(add, e, c))
 		r.Post("/v2", h(addV2, e, c))
