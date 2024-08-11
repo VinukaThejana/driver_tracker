@@ -2,16 +2,18 @@ package stream
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	"time"
 
 	"github.com/bytedance/sonic"
-	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
-	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
+	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
+	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
+	"github.com/go-chi/chi/v5"
 	"github.com/lesismal/nbio/nbhttp/websocket"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
@@ -27,8 +29,78 @@ type req struct {
 }
 
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
-	driverID := r.Context().Value(middlewares.DriverID).(int)
-	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
+	bookingTokenID := chi.URLParam(r, "booking_token_id")
+	if bookingTokenID == "" {
+		http.Error(w, errors.ErrBadRequest.Error(), http.StatusBadRequest)
+		return
+	}
+	driverID, err := strconv.Atoi(chi.URLParam(r, "driver_id"))
+	if err != nil {
+		log.Error().Err(err).Msgf(
+			"booking_token_id : %s\tfailed to convert the driver ID to integer",
+			bookingTokenID,
+		)
+		http.Error(w, errors.ErrBadRequest.Error(), http.StatusBadRequest)
+		return
+	}
+	partitionNo, err := strconv.Atoi(chi.URLParam(r, "partition"))
+	if err != nil {
+		log.Error().Err(err).Msgf(
+			"booking_token_id : %s\tdriver_id : %d\tfailed to convert the partition number to integer",
+			bookingTokenID,
+			driverID,
+		)
+		http.Error(w, errors.ErrBadRequest.Error(), http.StatusBadRequest)
+		return
+	}
+
+	basicDebugMsg := fmt.Sprintf(
+		"booking_token_id : %s\tdriver_id : %d\tpartition : %d",
+		bookingTokenID,
+		driverID,
+		partitionNo,
+	)
+
+	client := c.R.DB
+	val := client.Get(r.Context(), fmt.Sprint(driverID)).Val()
+	if val == "" {
+		log.Error().Msgf(
+			"%s\tvalue obtained for the driver ID is empty",
+			basicDebugMsg,
+		)
+		http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
+		return
+	}
+	DriverID := _lib.NewDriverID()
+	err = sonic.UnmarshalString(val, &DriverID)
+	if err != nil {
+		log.Error().Err(err).Msgf(
+			"%s\tfailed to unmarshal the driver ID",
+			basicDebugMsg,
+		)
+		http.Error(w, errors.ErrBadRequest.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if DriverID[_lib.DriverIDDriverToken] != bookingTokenID {
+		log.Error().Msgf(
+			"%s\tbooking_token_id_in_redis : %s\tunmatched driver tokens",
+			basicDebugMsg,
+			DriverID[_lib.DriverIDDriverToken],
+		)
+		http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if DriverID[_lib.DriverIDPartitionNo] != fmt.Sprint(partitionNo) {
+		log.Error().Msgf(
+			"%s\tpartition_number mismatch",
+			basicDebugMsg,
+		)
+		http.Error(w, errors.ErrUnauthorized.Error(), http.StatusUnauthorized)
+		return
+	}
+
 	count := 1
 
 	writer := c.K.B
@@ -90,7 +162,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		if count < updateinterval {
 			count++
 		} else {
-			c.R.DB.Set(r.Context(), lib.L(partitionNo), payload, redis.KeepTTL)
+			client.Set(r.Context(), _lib.L(partitionNo), payload, redis.KeepTTL)
 			count = 1
 		}
 	})
@@ -140,7 +212,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 		})
 	})
 
-	_, err := upgrader.Upgrade(w, r, nil)
+	_, err = upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -169,7 +241,7 @@ func blob(
 		}(),
 		"status": func() int {
 			if payload.Status == nil {
-				return int(lib.DefaultStatus)
+				return int(_lib.DefaultStatus)
 			}
 
 			return int(*payload.Status)
