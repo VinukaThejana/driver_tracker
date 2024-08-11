@@ -29,7 +29,6 @@ func checkJob(w http.ResponseWriter, r *http.Request, e *env.Env, c *connections
 			if val != "" {
 				return
 			}
-			client.Del(r.Context(), _lib.L(job))
 
 			val = client.Get(r.Context(), _lib.N(job)).Val()
 			if val == "" {
