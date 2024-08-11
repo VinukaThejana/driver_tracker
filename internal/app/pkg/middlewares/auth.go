@@ -147,7 +147,7 @@ func IsBookingTokenValid(
 			return
 		}
 
-		_, driverID, bookingID, partitionNo, err := bt.Get(token)
+		bookingTokenID, driverID, bookingID, partitionNo, err := bt.Get(token)
 		if err != nil {
 			log.Error().
 				Msgf(
@@ -160,6 +160,7 @@ func IsBookingTokenValid(
 
 		ctx := r.Context()
 
+		ctx = context.WithValue(ctx, BookingTokenID, bookingTokenID)
 		ctx = context.WithValue(ctx, DriverID, driverID)
 		ctx = context.WithValue(ctx, BookingID, bookingID)
 		ctx = context.WithValue(ctx, PartitionNo, partitionNo)
