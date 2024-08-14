@@ -19,6 +19,8 @@ import (
 // TODO: remove the usage of the google geocode API and replace it with the proper latitude and longitude cordinates
 
 type bookingDetails struct {
+	JobStatus       *int
+	BookTotal       *float64
 	BookRefNo       *string
 	BookPassengerNm *string
 	BookingContact  *string
@@ -29,7 +31,6 @@ type bookingDetails struct {
 	VehicleRegNo    *string
 	VehicleModel    *string
 	VehicleColor    *string
-	BookTotal       *float64
 }
 
 type geo struct {
@@ -59,6 +60,7 @@ SELECT
 	bookings.BookingContact,
 	bookings.BookPickUpAddr,
 	bookings.BookDropAddr,
+  bookings.JobStatus,
 	bookings.BookTotal,
 	bookings.DriverName,
 	bookings.DriverContact,
@@ -78,6 +80,7 @@ WHERE
 		&payload.BookingContact,
 		&payload.BookPickUpAddr,
 		&payload.BookDropAddr,
+		&payload.JobStatus,
 		&payload.BookTotal,
 		&payload.DriverName,
 		&payload.DriverContact,
@@ -96,6 +99,8 @@ WHERE
 		return
 	}
 
+	JobFinished := true
+	BookTotal := 0.0
 	BookPassengerNm := ""
 	BookingContact := ""
 	DriverName := ""
@@ -103,7 +108,6 @@ WHERE
 	VehicleRegNo := ""
 	VehicleModel := ""
 	VehicleColor := ""
-	BookTotal := 0.0
 
 	if payload.BookPassengerNm != nil {
 		BookPassengerNm = *payload.BookPassengerNm
@@ -113,6 +117,9 @@ WHERE
 	}
 	if payload.BookTotal != nil {
 		BookTotal = *payload.BookTotal
+	}
+	if payload.JobStatus != nil {
+		JobFinished = *payload.JobStatus == 5
 	}
 	if payload.DriverName != nil {
 		DriverName = *payload.DriverName
@@ -159,6 +166,7 @@ WHERE
 			data["stream"] = fmt.Sprintf("wss://%s/ws/stream/view/%s", e.WebsocketURL, bookingID)
 		}
 	}
+	data["finished"] = JobFinished
 
 	lib.JSONResponseWInterface(w, http.StatusOK, data)
 }
