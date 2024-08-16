@@ -5,11 +5,11 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/bytedance/sonic"
 	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/types"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
@@ -19,14 +19,6 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-type req struct {
-	Accuracy *float64 `json:"accuracy"`
-	Heading  *float64 `json:"heading"`
-	Status   *int64   `json:"status" validate:"omitempty,oneof=0 1 2 3 4 5"`
-	Lat      float64  `json:"lat" validate:"required,latitude"`
-	Lon      float64  `json:"lon" validate:"required,longitude"`
-}
-
 // add is a route that is used to add data to the stream
 func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	const maxRequestBodySize = 1 << 8
@@ -35,7 +27,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 
 	var (
 		reqData struct {
-			Location req `json:"location" validate:"required"`
+			Location types.LocationUpdate `json:"location" validate:"required"`
 		}
 		payload string
 		err     error
@@ -72,15 +64,7 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	blob := blob(req{
-		Lat:      reqData.Location.Lat,
-		Lon:      reqData.Location.Lon,
-		Heading:  reqData.Location.Heading,
-		Accuracy: reqData.Location.Accuracy,
-		Status:   reqData.Location.Status,
-	})
-
-	payload, err = sonic.MarshalString(blob)
+	payload, err = sonic.MarshalString(reqData.Location.GetBlob())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the payload")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
@@ -115,30 +99,4 @@ func add(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C) {
 			driverID,
 		)
 	lib.JSONResponse(w, http.StatusOK, "added")
-}
-
-func blob(payload req) map[string]any {
-	return map[string]any{
-		"lat": payload.Lat,
-		"lon": payload.Lon,
-		"heading": func() float64 {
-			if payload.Heading == nil {
-				return 0
-			}
-			return *payload.Heading
-		}(),
-		"accuracy": func() float64 {
-			if payload.Accuracy == nil {
-				return -1
-			}
-			return *payload.Accuracy
-		}(),
-		"status": func() int {
-			if payload.Status == nil {
-				return int(_lib.DefaultStatus)
-			}
-			return int(*payload.Status)
-		}(),
-		"timestamp": time.Now().UTC().Unix(),
-	}
 }

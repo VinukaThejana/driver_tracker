@@ -9,6 +9,7 @@ import (
 	"github.com/bytedance/sonic"
 	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/middlewares"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/types"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/errors"
@@ -26,7 +27,7 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 
 	var (
 		reqData struct {
-			Location req `json:"location" validate:"required"`
+			Location types.LocationUpdate `json:"location" validate:"required"`
 		}
 		payload string
 		err     error
@@ -63,15 +64,7 @@ func addV2(w http.ResponseWriter, r *http.Request, _ *env.Env, c *connections.C)
 	driverID := r.Context().Value(middlewares.DriverID).(int)
 	partitionNo := r.Context().Value(middlewares.PartitionNo).(int)
 
-	blob := blob(req{
-		Lat:      reqData.Location.Lat,
-		Lon:      reqData.Location.Lon,
-		Heading:  reqData.Location.Heading,
-		Accuracy: reqData.Location.Accuracy,
-		Status:   reqData.Location.Status,
-	})
-
-	payload, err = sonic.MarshalString(blob)
+	payload, err = sonic.MarshalString(reqData.Location.GetBlob())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to marshal the payload")
 		lib.JSONResponse(w, http.StatusInternalServerError, errors.ErrServer.Error())
