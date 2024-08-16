@@ -8,6 +8,7 @@ import (
 	"github.com/bytedance/sonic"
 	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/services"
+	"github.com/flitlabs/spotoncars_stream/internal/app/pkg/types"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/connections"
 	"github.com/flitlabs/spotoncars_stream/internal/pkg/env"
 	"github.com/golang-jwt/jwt/v5"
@@ -89,14 +90,11 @@ func (bt *BookingToken) Create(
 		return "", err
 	}
 
-	pickupStr, err := sonic.MarshalString(map[string]any{
-		"lat":       opts.PickupCordinates.Lat,
-		"lon":       opts.PickupCordinates.Lon,
-		"heading":   0,
-		"accuracy":  -1,
-		"status":    _lib.DefaultStatus,
-		"timestamp": time.Now().UTC().Unix(),
-	})
+	pickup := types.LocationUpdate{
+		Lat: opts.PickupCordinates.Lat,
+		Lon: opts.PickupCordinates.Lon,
+	}
+	pickupStr, err := sonic.MarshalString(pickup.GetBlob())
 	if err != nil {
 		return "", err
 	}
