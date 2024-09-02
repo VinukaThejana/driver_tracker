@@ -1,6 +1,8 @@
 package types
 
 import (
+	"time"
+
 	_lib "github.com/flitlabs/spotoncars_stream/internal/app/pkg/lib"
 )
 
@@ -48,5 +50,6 @@ func (location *LocationUpdate) GetBlob() map[string]any {
 
 			return int(*location.Status)
 		}(),
+		"timestamp": time.Now().UTC().Unix(),
 	}
 }
